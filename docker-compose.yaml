@@ -1,0 +1,9 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.develop
+    ports:
+      - 3001:8000
+    volumes:
+      - ./:/app
