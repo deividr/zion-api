@@ -7,6 +7,7 @@ import (
 
 func main() {
 	r := gin.Default()
-	r.GET("products", controllers.GetProducts)
-	r.Run("0.0.0.0:8000")
+	r.GET("products", controllers.GetAll)
+	r.GET("products/:id", controllers.GetById)
+	r.Run(":8000")
 }

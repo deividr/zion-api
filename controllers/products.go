@@ -18,6 +18,19 @@ var products = []Product{
 	{Id: "3", Name: "Sarah Vaughan and Clifford Brown", UnityType: "Sarah Vaughan", Value: 3999},
 }
 
-func GetProducts(c *gin.Context) {
+func GetAll(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, products)
+}
+
+func GetById(c *gin.Context) {
+	id := c.Param("id")
+
+	for _, product := range products {
+		if product.Id == id {
+			c.IndentedJSON(http.StatusFound, product)
+			return
+		}
+	}
+
+	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Product not found"})
 }
