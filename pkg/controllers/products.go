@@ -27,7 +27,7 @@ func GetById(c *gin.Context) {
 
 	for _, product := range products {
 		if product.Id == id {
-			c.IndentedJSON(http.StatusFound, product)
+			c.IndentedJSON(http.StatusOK, product)
 			return
 		}
 	}
