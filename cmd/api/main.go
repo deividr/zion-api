@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/deividr/zion-api/pkg/controllers"
+	"github.com/deividr/zion-api/internal/controllers"
 	"github.com/gin-gonic/gin"
 )
 
