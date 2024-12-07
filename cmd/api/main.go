@@ -7,12 +7,7 @@ import (
 )
 
 func main() {
-	err := godotenv.Load()
-
-	if err != nil {
-		panic("Environments variables does not allow")
-	}
-
+	godotenv.Load()
 	r := gin.Default()
 	r.GET("products", controllers.GetAll)
 	r.GET("products/:id", controllers.GetById)
