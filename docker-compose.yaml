@@ -13,11 +13,10 @@ services:
   db:
     image: postgres:16-alpine
     ports: 
-      - 5423:5432
+      - 5432:5432
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
       POSTGRES_DB: zion
       POSTGRES_USER: postgres
     volumes:
       - ./data:/var/lib/postgresql/data
-
