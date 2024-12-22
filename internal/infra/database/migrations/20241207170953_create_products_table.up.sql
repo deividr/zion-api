@@ -1,9 +1,11 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE products (
-  id         uuid PRIMARY KEY,
+  id         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name       varchar(50) NOT NULL,
   value      integer NOT NULL,
-  unityType  char(2) NOT NULL,
-  isDeleted  boolean DEFAULT false NOT NULL,
-  createdAt  timestamp DEFAULT now() NOT NULL,
-  updatedAt  timestamp
+  unity_type  char(2) NOT NULL,
+  is_deleted  boolean DEFAULT false NOT NULL,
+  created_at  timestamp DEFAULT now() NOT NULL,
+  updated_at  timestamp
 );
