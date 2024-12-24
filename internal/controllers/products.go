@@ -1,36 +1,40 @@
 package controllers
 
 import (
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/deividr/zion-api/internal/usecase"
+	"github.com/gin-gonic/gin"
 )
 
-type Product struct {
-	Id        string `json:"id"`
-	Name      string `json:"name"`
-	Value     uint32 `json:"value"`
-	UnityType string `json:"unityType"`
+type ProductController struct {
+	useCase *usecase.ProductUseCase
 }
 
-var products = []Product{
-	{Id: "1", Name: "Blue Train", UnityType: "John Coltrane", Value: 599},
-	{Id: "2", Name: "Jeru", UnityType: "Gerry Mulligan", Value: 1799},
-	{Id: "3", Name: "Sarah Vaughan and Clifford Brown", UnityType: "Sarah Vaughan", Value: 3999},
+func NewProductController(useCase *usecase.ProductUseCase) *ProductController {
+	return &ProductController{useCase: useCase}
 }
 
-func GetAll(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, products)
-}
+func (c *ProductController) GetAll(ctx *gin.Context) {
+	products, err := c.useCase.GetAll()
 
-func GetById(c *gin.Context) {
-	id := c.Param("id")
-
-	for _, product := range products {
-		if product.Id == id {
-			c.IndentedJSON(http.StatusOK, product)
-			return
-		}
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 
-	c.IndentedJSON(http.StatusNotFound, gin.H{"message": "Product not found"})
+	ctx.IndentedJSON(http.StatusOK, products)
+}
+
+func (c *ProductController) GetById(ctx *gin.Context) {
+	id := ctx.Param("id")
+
+	product, err := c.useCase.GetById(id)
+
+	if err != nil {
+		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Product not found"})
+		return
+	}
+
+	ctx.IndentedJSON(http.StatusOK, product)
 }
