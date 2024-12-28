@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/deividr/zion-api/internal/controllers"
+	"github.com/deividr/zion-api/internal/controller"
 	"github.com/deividr/zion-api/internal/infra/database"
 	"github.com/deividr/zion-api/internal/infra/repository/postgres"
 	"github.com/deividr/zion-api/internal/usecase"

@@ -7,7 +7,12 @@ type Product struct {
 	UnityType string `json:"unityType"`
 }
 
+type FindAllProductFilters struct {
+	Name       string
+	Unity_type string
+}
+
 type ProductRepository interface {
-	FindAll() ([]Product, error)
+	FindAll(Pagination, FindAllProductFilters) ([]Product, Pagination, error)
 	FindById(id string) (*Product, error)
 }
