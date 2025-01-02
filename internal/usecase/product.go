@@ -14,14 +14,14 @@ func NewProductUseCase(repo domain.ProductRepository) *ProductUseCase {
 	return &ProductUseCase{repo: repo}
 }
 
-func (uc *ProductUseCase) GetAll(pagination domain.Pagination, filters domain.FindAllProductFilters) ([]domain.Product, error) {
-	products, _, err := uc.repo.FindAll(pagination, filters)
+func (uc *ProductUseCase) GetAll(pagination domain.Pagination, filters domain.FindAllProductFilters) ([]domain.Product, domain.Pagination, error) {
+	products, pagination, err := uc.repo.FindAll(pagination, filters)
 
 	if err != nil {
-		return nil, fmt.Errorf("erro ao buscar produtos: %v", err)
+		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar produtos: %v", err)
 	}
 
-	return products, nil
+	return products, pagination, nil
 }
 
 func (uc *ProductUseCase) GetById(id string) (*domain.Product, error) {

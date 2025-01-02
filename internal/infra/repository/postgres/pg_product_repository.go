@@ -24,12 +24,25 @@ func NewPgProductRepository(db *pgxpool.Pool) *PgProductRepository {
 func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters domain.FindAllProductFilters) ([]domain.Product, domain.Pagination, error) {
 	offset := pagination.Limit * (pagination.Page - 1)
 
-	// Construindo a query com Squirrel
-	query, args, err := r.qb.
+	baseQuery := r.qb.
+		Where(squirrel.Eq{"is_deleted": false}).
+		Where(squirrel.ILike{"name": "%" + filters.Name + "%"})
+
+	totalCountQuery, totalCountArgs, err := baseQuery.Select("count(*)").From("products").ToSql()
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query de total: %v", err)
+	}
+
+	var totalCount int
+
+	err = r.db.QueryRow(context.Background(), totalCountQuery, totalCountArgs...).Scan(&totalCount)
+	if err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar total de produtos: %v", err)
+	}
+
+	query, args, err := baseQuery.
 		Select("id", "name", "value", "unity_type").
 		From("products").
-		Where(squirrel.Eq{"is_deleted": false}).
-		Where(squirrel.ILike{"name": "%" + filters.Name + "%"}).
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset)).
 		ToSql()
@@ -60,6 +73,9 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 		}
 		products = append(products, product)
 	}
+
+	// Update pagination with total count
+	pagination.Total = totalCount
 
 	return products, pagination, nil
 }
