@@ -6,13 +6,15 @@ services:
     ports:
       - 3000:8000
     volumes:
-      - ./:/app 
+      - ./:/app
     depends_on:
       - db
-  
+    networks:
+      - zion-network
+
   db:
     image: postgres:16-alpine
-    ports: 
+    ports:
       - 5432:5432
     environment:
       POSTGRES_HOST_AUTH_METHOD: trust
@@ -20,3 +22,9 @@ services:
       POSTGRES_USER: postgres
     volumes:
       - ./data:/var/lib/postgresql/data
+    networks:
+      - zion-network
+
+networks:
+  zion-network:
+    external: true
