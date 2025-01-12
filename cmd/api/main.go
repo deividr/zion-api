@@ -42,6 +42,7 @@ func main() {
 
 	r.GET("/products", productController.GetAll)
 	r.GET("/products/:id", productController.GetById)
+	r.PUT("/products/:id", productController.Update)
 
 	r.Run(":8000")
 }

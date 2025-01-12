@@ -51,3 +51,19 @@ func (c *ProductController) GetById(ctx *gin.Context) {
 
 	ctx.IndentedJSON(http.StatusOK, product)
 }
+
+func (c *ProductController) Update(ctx *gin.Context) {
+	var product domain.Product
+	if err := ctx.BindJSON(&product); err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	err := c.useCase.Update(product)
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Product updated successfully"})
+}

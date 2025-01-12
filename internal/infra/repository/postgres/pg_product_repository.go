@@ -99,3 +99,25 @@ func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 
 	return &product, nil
 }
+
+func (r *PgProductRepository) Update(product domain.Product) error {
+	updateBuilder, args, err := r.qb.
+		Update("products").Set("name", product.Name).
+		Set("value", product.Value).
+		Set("unity_type", product.UnityType).
+		Where(squirrel.Eq{"id": product.Id}).
+		Where(squirrel.Eq{"is_deleted": false}).ToSql()
+
+	if err != nil {
+		return fmt.Errorf("erro ao construir query para atualizar o produto: %v", err)
+	}
+
+	result, err := r.db.Query(context.Background(), updateBuilder, args...)
+	if err != nil {
+		return fmt.Errorf("erro ao atualizar produto: %v", err)
+	}
+	defer result.Close()
+	fmt.Println(result)
+
+	return err
+}

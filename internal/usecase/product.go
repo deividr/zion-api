@@ -31,3 +31,11 @@ func (uc *ProductUseCase) GetById(id string) (*domain.Product, error) {
 	}
 	return product, nil
 }
+
+func (uc *ProductUseCase) Update(product domain.Product) error {
+	err := uc.repo.Update(product)
+	if err != nil {
+		return fmt.Errorf("erro ao atualizar produto: %v", err)
+	}
+	return nil
+}
