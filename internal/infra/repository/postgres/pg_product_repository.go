@@ -121,3 +121,12 @@ func (r *PgProductRepository) Update(product domain.Product) error {
 
 	return err
 }
+
+func (r *PgProductRepository) Delete(id string) error {
+	result, err := r.db.Query(context.Background(), "UPDATE products SET is_deleted = true WHERE id = $1", id)
+	if err != nil {
+		return fmt.Errorf("erro ao deletar produto: %v", err)
+	}
+	defer result.Close()
+	return nil
+}

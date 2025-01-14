@@ -39,3 +39,11 @@ func (uc *ProductUseCase) Update(product domain.Product) error {
 	}
 	return nil
 }
+
+func (uc *ProductUseCase) Delete(id string) error {
+	err := uc.repo.Delete(id)
+	if err != nil {
+		return fmt.Errorf("erro ao deletar produto: %v", err)
+	}
+	return nil
+}

@@ -67,3 +67,13 @@ func (c *ProductController) Update(ctx *gin.Context) {
 
 	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Product updated successfully"})
 }
+
+func (c *ProductController) Delete(ctx *gin.Context) {
+	id := ctx.Param("id")
+	err := c.useCase.Delete(id)
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
+}

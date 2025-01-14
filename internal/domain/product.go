@@ -16,4 +16,5 @@ type ProductRepository interface {
 	FindAll(Pagination, FindAllProductFilters) ([]Product, Pagination, error)
 	FindById(id string) (*Product, error)
 	Update(Product) error
+	Delete(id string) error
 }
