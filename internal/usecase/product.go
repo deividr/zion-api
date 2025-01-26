@@ -47,3 +47,13 @@ func (uc *ProductUseCase) Delete(id string) error {
 	}
 	return nil
 }
+
+func (uc *ProductUseCase) Create(newProduct domain.NewProduct) (*domain.Product, error) {
+	createdProduct, err := uc.repo.Create(newProduct)
+
+	if err != nil {
+		return nil, fmt.Errorf("erro ao criar produto: %v", err)
+	}
+
+	return createdProduct, nil
+}

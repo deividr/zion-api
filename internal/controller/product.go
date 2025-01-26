@@ -77,3 +77,19 @@ func (c *ProductController) Delete(ctx *gin.Context) {
 	}
 	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
 }
+
+func (c *ProductController) Create(ctx *gin.Context) {
+	var newProduct domain.NewProduct
+	if err := ctx.BindJSON(&newProduct); err != nil {
+		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		return
+	}
+
+	createdProduct, err := c.useCase.Create(newProduct)
+	if err != nil {
+		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		return
+	}
+
+	ctx.IndentedJSON(http.StatusOK, createdProduct)
+}

@@ -117,9 +117,8 @@ func (r *PgProductRepository) Update(product domain.Product) error {
 		return fmt.Errorf("erro ao atualizar produto: %v", err)
 	}
 	defer result.Close()
-	fmt.Println(result)
 
-	return err
+	return nil
 }
 
 func (r *PgProductRepository) Delete(id string) error {
@@ -129,4 +128,32 @@ func (r *PgProductRepository) Delete(id string) error {
 	}
 	defer result.Close()
 	return nil
+}
+
+func (r *PgProductRepository) Create(newProduct domain.NewProduct) (*domain.Product, error) {
+	insertBuilder, args, errQB := r.qb.Insert("products").
+		Columns("name", "value", "unity_type").
+		Values(&newProduct.Name, &newProduct.Value, &newProduct.UnityType).
+		Suffix("RETURNING id").
+		ToSql()
+
+	if errQB != nil {
+		return nil, fmt.Errorf("erro ao construir query para criar o produto: %v", errQB)
+	}
+
+	var id string
+	errQuery := r.db.QueryRow(context.Background(), insertBuilder, args...).Scan(&id)
+
+	if errQuery != nil {
+		return nil, fmt.Errorf("erro ao criar produto: %v", errQB)
+	}
+
+	createdProduct := &domain.Product{
+		Id:        id,
+		Name:      newProduct.Name,
+		Value:     newProduct.Value,
+		UnityType: newProduct.UnityType,
+	}
+
+	return createdProduct, nil
 }
