@@ -1,13 +1,17 @@
 package main
 
 import (
-	controllers "github.com/deividr/zion-api/internal/controller"
-	"github.com/deividr/zion-api/internal/infra/database"
-	"github.com/deividr/zion-api/internal/infra/repository/postgres"
-	"github.com/deividr/zion-api/internal/usecase"
+	"os"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+
+	controllers "github.com/deividr/zion-api/internal/controller"
+	"github.com/deividr/zion-api/internal/infra/database"
+	"github.com/deividr/zion-api/internal/infra/repository/postgres"
+	"github.com/deividr/zion-api/internal/middleware"
+	"github.com/deividr/zion-api/internal/usecase"
 )
 
 func main() {
@@ -31,7 +35,7 @@ func main() {
 
 	// CORS configuration
 	corsConfig := cors.Config{
-		AllowOrigins:     []string{"*"}, // Altere para os domínios permitidos
+		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -40,11 +44,16 @@ func main() {
 
 	r.Use(cors.New(corsConfig))
 
-	r.GET("/products", productController.GetAll)
-	r.GET("/products/:id", productController.GetById)
-	r.PUT("/products/:id", productController.Update)
-	r.DELETE("/products/:id", productController.Delete)
-	r.POST("/products", productController.Create)
+	// Grupo de rotas protegidas
+	protected := r.Group("")
+	protected.Use(middleware.AuthMiddleware(os.Getenv("CLERK_PEM_PUBLIC_KEY")))
+	{
+		protected.GET("/products", productController.GetAll)
+		protected.GET("/products/:id", productController.GetById)
+		protected.PUT("/products/:id", productController.Update)
+		protected.DELETE("/products/:id", productController.Delete)
+		protected.POST("/products", productController.Create)
+	}
 
 	r.Run(":8000")
 }
