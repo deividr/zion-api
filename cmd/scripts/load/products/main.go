@@ -69,8 +69,7 @@ func main() {
 		product.Value = uint32(floatValue * 100)
 
 		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO products (name, value, unity_type) 
-			 VALUES ($1, $2, $3)`,
+			`INSERT INTO products (name, value, unity_type) VALUES ($1, $2, $3)`,
 			product.Name, product.Value, product.UnityType)
 
 		if err != nil {

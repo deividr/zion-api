@@ -6,5 +6,6 @@ CREATE TABLE customers (
     email text,
     is_deleted boolean DEFAULT false NOT NULL,
     created_at timestamp DEFAULT now() NOT NULL,
-    updated_at timestamp
+    updated_at timestamp,
+    old_id int
 );

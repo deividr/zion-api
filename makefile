@@ -9,4 +9,10 @@ migrate_up:
 migrate_down:
 	migrate -path=internal/infra/database/migrations -database "${DATABASE_URL_MIGRATE}" -verbose down
 
-.PHONY: create_migration migrate_up migrate_down
+load_products:
+	go run cmd/scripts/load/products/main.go
+
+load_customers:
+	go run cmd/scripts/load/customers/main.go
+
+.PHONY: create_migration migrate_up migrate_down load_products
