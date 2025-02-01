@@ -51,7 +51,6 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query: %v", err)
 	}
 
-	fmt.Println(query)
 	rows, err := r.db.Query(context.Background(), query, args...)
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar produtos: %v", err)
