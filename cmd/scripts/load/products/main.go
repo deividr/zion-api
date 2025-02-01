@@ -16,6 +16,7 @@ type Product struct {
 	Name      string `json:"name"`
 	Value     uint32 `json:"value"`
 	UnityType string `json:"unityType"`
+	OldId     int    `json:"oldId"`
 }
 
 func main() {
@@ -60,7 +61,7 @@ func main() {
 		var product Product
 		var floatValue float64
 
-		err3 := results.Scan(&product.Id, &product.Name, &product.UnityType, &floatValue)
+		err3 := results.Scan(&product.OldId, &product.Name, &product.UnityType, &floatValue)
 		if err3 != nil {
 			fmt.Println("Erro no scan", err3)
 			continue
@@ -69,8 +70,8 @@ func main() {
 		product.Value = uint32(floatValue * 100)
 
 		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO products (name, value, unity_type) VALUES ($1, $2, $3)`,
-			product.Name, product.Value, product.UnityType)
+			`INSERT INTO products (old_id, name, value, unity_type) VALUES ($1, $2, $3, $4)`,
+			product.OldId, product.Name, product.Value, product.UnityType)
 
 		if err != nil {
 			fmt.Println("Erro ao inserir no PostgreSQL: ", err)
