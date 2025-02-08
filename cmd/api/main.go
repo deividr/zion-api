@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
 	controllers "github.com/deividr/zion-api/internal/controller"
@@ -20,15 +21,6 @@ func main() {
 	// Setup database connection
 	dbPool := database.GetConnection()
 	defer dbPool.Close()
-
-	// Setup repositories
-	productRepo := postgres.NewPgProductRepository(dbPool)
-
-	// Setup use cases
-	productUseCase := usecase.NewProductUseCase(productRepo)
-
-	// Setup controllers
-	productController := controllers.NewProductController(productUseCase)
 
 	// Setup router
 	r := gin.Default()
@@ -47,13 +39,42 @@ func main() {
 	// Grupo de rotas protegidas
 	protected := r.Group("")
 	protected.Use(middleware.AuthMiddleware(os.Getenv("CLERK_PEM_PUBLIC_KEY")))
-	{
-		protected.GET("/products", productController.GetAll)
-		protected.GET("/products/:id", productController.GetById)
-		protected.PUT("/products/:id", productController.Update)
-		protected.DELETE("/products/:id", productController.Delete)
-		protected.POST("/products", productController.Create)
-	}
+
+	productRoutes(protected, dbPool)
 
 	r.Run(":8000")
+}
+
+func productRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
+	// Setup repositories
+	productRepo := postgres.NewPgProductRepository(pool)
+
+	// Setup use cases
+	productUseCase := usecase.NewProductUseCase(productRepo)
+
+	// Setup controllers
+	productController := controllers.NewProductController(productUseCase)
+
+	router.GET("/products", productController.GetAll)
+	router.GET("/products/:id", productController.GetById)
+	router.PUT("/products/:id", productController.Update)
+	router.DELETE("/products/:id", productController.Delete)
+	router.POST("/products", productController.Create)
+}
+
+func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
+	// Setup repositories
+	customerRepo := postgres.NewPgCustomerRepository(pool)
+
+	// Setup use cases
+	customerUseCase := usecase.NewCustomerUseCase(customerRepo)
+
+	// Setup controllers
+	customerController := controllers.NewCustomerController(customerUseCase)
+
+	router.GET("/products", customerController.GetAll)
+	router.GET("/products/:id", customerController.GetById)
+	router.PUT("/products/:id", customerController.Update)
+	router.DELETE("/products/:id", customerController.Delete)
+	router.POST("/products", customerController.Create)
 }
