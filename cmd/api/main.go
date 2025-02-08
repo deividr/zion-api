@@ -41,6 +41,7 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(os.Getenv("CLERK_PEM_PUBLIC_KEY")))
 
 	productRoutes(protected, dbPool)
+	customerRoutes(protected, dbPool)
 
 	r.Run(":8000")
 }
@@ -72,9 +73,9 @@ func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	// Setup controllers
 	customerController := controllers.NewCustomerController(customerUseCase)
 
-	router.GET("/products", customerController.GetAll)
-	router.GET("/products/:id", customerController.GetById)
-	router.PUT("/products/:id", customerController.Update)
-	router.DELETE("/products/:id", customerController.Delete)
-	router.POST("/products", customerController.Create)
+	router.GET("/customers", customerController.GetAll)
+	router.GET("/customers/:id", customerController.GetById)
+	router.PUT("/customers/:id", customerController.Update)
+	router.DELETE("/customers/:id", customerController.Delete)
+	router.POST("/customers", customerController.Create)
 }
