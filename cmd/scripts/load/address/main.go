@@ -8,24 +8,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/deividr/zion-api/internal/domain"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
-
-type Address struct {
-	Id               string  `json:"id"`
-	OldId            string  `json:"oldId"`
-	CustomerId       string  `json:"customerId"`
-	Cep              string  `json:"cep"`
-	Street           *string `json:"street"`
-	Number           *string `json:"number"`
-	Neighborhood     *string `json:"neighborhood"`
-	City             *string `json:"city"`
-	State            *string `json:"state"`
-	AditionalDetails *string `json:"aditionalDetails"`
-	Distance         *string `json:"distance"`
-}
 
 func convertDistanceToInt8(distanceStr string) (int8, error) {
 	cleanStr := strings.TrimSpace(strings.ReplaceAll(distanceStr, "km", ""))
@@ -74,11 +62,11 @@ func main() {
 	}
 
 	for results.Next() {
-		var address Address
+		var address domain.Address
 
 		err3 := results.Scan(
 			&address.OldId,
-			&address.CustomerId,
+			&address.AddressId,
 			&address.Cep,
 			&address.Street,
 			&address.Number,
@@ -103,7 +91,7 @@ func main() {
 			distance = result
 		}
 
-		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.CustomerId).Scan(&address.CustomerId)
+		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.AddressId).Scan(&address.AddressId)
 		if err4 != nil {
 			fmt.Println("Erro no select do customer", err4)
 			continue
@@ -113,7 +101,7 @@ func main() {
 			`INSERT INTO addresses (old_id, customer_id, cep, street, adr_number, neighborhood, city, adr_state, aditional_details, distance) 
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			address.OldId,
-			address.CustomerId,
+			address.AddressId,
 			address.Cep,
 			address.Street,
 			address.Number,

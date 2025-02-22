@@ -65,7 +65,7 @@ func productRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 
 func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	// Setup repositories
-	customerRepo := postgres.NewPgCustomerRepository(pool)
+	customerRepo := postgres.NewPgAddressRepository(pool)
 
 	// Setup use cases
 	customerUseCase := usecase.NewCustomerUseCase(customerRepo)
