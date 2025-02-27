@@ -66,7 +66,7 @@ func main() {
 
 		err3 := results.Scan(
 			&address.OldId,
-			&address.AddressId,
+			&address.Id,
 			&address.Cep,
 			&address.Street,
 			&address.Number,
@@ -91,7 +91,7 @@ func main() {
 			distance = result
 		}
 
-		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.AddressId).Scan(&address.AddressId)
+		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.Id).Scan(&address.Id)
 		if err4 != nil {
 			fmt.Println("Erro no select do customer", err4)
 			continue
@@ -101,7 +101,7 @@ func main() {
 			`INSERT INTO addresses (old_id, customer_id, cep, street, adr_number, neighborhood, city, adr_state, aditional_details, distance) 
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			address.OldId,
-			address.AddressId,
+			address.Id,
 			address.Cep,
 			address.Street,
 			address.Number,
