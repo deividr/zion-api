@@ -18,4 +18,4 @@ load_customers:
 load_addresses:
 	go run cmd/scripts/load/address/main.go
 
-.PHONY: create_migration migrate_up migrate_down load_products
+.PHONY: create_migration migrate_up migrate_down load_products load_customers load_addresses
