@@ -11,6 +11,7 @@ import (
 
 func AuthMiddleware(publicKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		fmt.Println("this is public key: %v", publicKey)
 		// Obtém o token do header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
