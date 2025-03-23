@@ -5,34 +5,40 @@ import (
 	"strconv"
 
 	"github.com/deividr/zion-api/internal/domain"
+	"github.com/deividr/zion-api/internal/infra/logger"
 	"github.com/deividr/zion-api/internal/usecase"
 	"github.com/gin-gonic/gin"
 )
 
 type ProductController struct {
 	useCase *usecase.ProductUseCase
+	logger  *logger.Logger
 }
 
 func NewProductController(useCase *usecase.ProductUseCase) *ProductController {
-	return &ProductController{useCase: useCase}
+	return &ProductController{
+		useCase: useCase,
+		logger:  logger.New(),
+	}
 }
 
 func (c *ProductController) GetAll(ctx *gin.Context) {
 	limit, err := strconv.Atoi(ctx.Query("limit"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "message": "Invalid limit params"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit params"})
 		return
 	}
 
 	page, err := strconv.Atoi(ctx.Query("page"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "message": "Invalid limit page"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit page"})
 		return
 	}
 
 	products, pagination, err := c.useCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllProductFilters{Name: ctx.Query("name")})
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.logger.Error("Error fetching products", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Fetching products fatal failed"})
 		return
 	}
 
@@ -43,7 +49,6 @@ func (c *ProductController) GetById(ctx *gin.Context) {
 	id := ctx.Param("id")
 
 	product, err := c.useCase.GetById(id)
-
 	if err != nil {
 		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Product not found"})
 		return
@@ -55,13 +60,14 @@ func (c *ProductController) GetById(ctx *gin.Context) {
 func (c *ProductController) Update(ctx *gin.Context) {
 	var product domain.Product
 	if err := ctx.BindJSON(&product); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid product data"})
 		return
 	}
 
 	err := c.useCase.Update(product)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.logger.Error("Failed to update product", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update product"})
 		return
 	}
 
@@ -72,7 +78,8 @@ func (c *ProductController) Delete(ctx *gin.Context) {
 	id := ctx.Param("id")
 	err := c.useCase.Delete(id)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.logger.Error("Failed to delete product", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete product"})
 		return
 	}
 	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Product deleted successfully"})
@@ -81,15 +88,16 @@ func (c *ProductController) Delete(ctx *gin.Context) {
 func (c *ProductController) Create(ctx *gin.Context) {
 	var newProduct domain.NewProduct
 	if err := ctx.BindJSON(&newProduct); err != nil {
-		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"message": err.Error()})
+		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid product data"})
 		return
 	}
 
 	createdProduct, err := c.useCase.Create(newProduct)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": err.Error()})
+		c.logger.Error("Failed to create product", err)
+		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create product"})
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, createdProduct)
+	ctx.IndentedJSON(http.StatusCreated, createdProduct)
 }
