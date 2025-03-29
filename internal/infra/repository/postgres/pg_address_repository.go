@@ -50,6 +50,7 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 			"state",
 			"aditional_details",
 			"distance",
+			"is_default",
 		).
 		From("addresses").
 		Limit(uint64(pagination.Limit)).
@@ -81,6 +82,7 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 			&address.State,
 			&address.AditionalDetails,
 			&address.Distance,
+			&address.IsDefault,
 		)
 		if err != nil {
 			return nil, domain.Pagination{}, fmt.Errorf("error on read address informations: %v", err)
@@ -109,6 +111,7 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 			state,
 			aditional_details,
 			distance,
+			is_default,
 		FROM addresses 
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
@@ -123,6 +126,7 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 		&address.State,
 		&address.AditionalDetails,
 		&address.Distance,
+		&address.IsDefault,
 	)
 
 	if err != nil {
@@ -145,6 +149,7 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 		"state",
 		"aditional_details",
 		"distance",
+		"is_default",
 	).From("addresses").Where(squirrel.Eq{"is_deleted": false})
 
 	for key, value := range filters {
@@ -178,6 +183,7 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 			&address.State,
 			&address.AditionalDetails,
 			&address.Distance,
+			&address.IsDefault,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("error reading address information: %w", err)
@@ -199,6 +205,7 @@ func (r *PgAddressRepository) Update(address domain.Address) error {
 		Set("state", address.State).
 		Set("aditional_details", address.AditionalDetails).
 		Set("distance", address.Distance).
+		Set("is_default", address.IsDefault).
 		Where(squirrel.Eq{"id": address.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
 
@@ -226,7 +233,7 @@ func (r *PgAddressRepository) Delete(id string) error {
 
 func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Address, error) {
 	insertBuilder, args, errQB := r.qb.Insert("addresses").
-		Columns("customer_id", "cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance").
+		Columns("customer_id", "cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance", "is_default").
 		Values(
 			&newAddress.CustomerId,
 			&newAddress.Cep,
@@ -236,7 +243,8 @@ func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Addr
 			&newAddress.City,
 			&newAddress.State,
 			&newAddress.AditionalDetails,
-			&newAddress.Distance).
+			&newAddress.Distance,
+			&newAddress.IsDefault).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -262,6 +270,7 @@ func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Addr
 		State:            newAddress.State,
 		AditionalDetails: newAddress.AditionalDetails,
 		Distance:         newAddress.Distance,
+		IsDefault:        newAddress.IsDefault,
 	}
 
 	return createdAddress, nil

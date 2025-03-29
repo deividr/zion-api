@@ -1,6 +1,9 @@
 package controllers
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -11,14 +14,16 @@ import (
 )
 
 type CustomerController struct {
-	useCase *usecase.CustomerUseCase
-	logger  *logger.Logger
+	customerUseCase *usecase.CustomerUseCase
+	addressUseCase  *usecase.AddressUseCase
+	logger          *logger.Logger
 }
 
-func NewCustomerController(useCase *usecase.CustomerUseCase) *CustomerController {
+func NewCustomerController(customerUseCase *usecase.CustomerUseCase, addressUseCase *usecase.AddressUseCase) *CustomerController {
 	return &CustomerController{
-		useCase: useCase,
-		logger:  logger.New(),
+		customerUseCase: customerUseCase,
+		addressUseCase:  addressUseCase,
+		logger:          logger.New(),
 	}
 }
 
@@ -37,7 +42,7 @@ func (c *CustomerController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	customers, pagination, err := c.useCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllCustomerFilters{Name: ctx.Query("name")})
+	customers, pagination, err := c.customerUseCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllCustomerFilters{Name: ctx.Query("name")})
 	if err != nil {
 		c.logger.Error("Error fetching customers", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Fetching customers fatal failed"})
@@ -50,13 +55,20 @@ func (c *CustomerController) GetAll(ctx *gin.Context) {
 func (c *CustomerController) GetById(ctx *gin.Context) {
 	id := ctx.Param("id")
 
-	customer, err := c.useCase.GetById(id)
+	customer, err := c.customerUseCase.GetById(id)
 	if err != nil {
 		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Customer not found"})
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, customer)
+	addresses, err := c.addressUseCase.GetBy(map[string]interface{}{"customer_id": customer.Id})
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		fmt.Println(err)
+		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Error to get address by customer id"})
+		return
+	}
+
+	ctx.IndentedJSON(http.StatusOK, gin.H{"customer": customer, "addresses": addresses})
 }
 
 func (c *CustomerController) Update(ctx *gin.Context) {
@@ -67,7 +79,7 @@ func (c *CustomerController) Update(ctx *gin.Context) {
 		return
 	}
 
-	err := c.useCase.Update(customer)
+	err := c.customerUseCase.Update(customer)
 	if err != nil {
 		c.logger.Error("Failed to update customer", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to update customer"})
@@ -79,7 +91,7 @@ func (c *CustomerController) Update(ctx *gin.Context) {
 
 func (c *CustomerController) Delete(ctx *gin.Context) {
 	id := ctx.Param("id")
-	err := c.useCase.Delete(id)
+	err := c.customerUseCase.Delete(id)
 	if err != nil {
 		c.logger.Error("Failed to delete customer", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete customer"})
@@ -96,7 +108,7 @@ func (c *CustomerController) Create(ctx *gin.Context) {
 		return
 	}
 
-	createdCustomer, err := c.useCase.Create(newCustomer)
+	createdCustomer, err := c.customerUseCase.Create(newCustomer)
 	if err != nil {
 		c.logger.Error("Failed to create customer", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to create customer"})

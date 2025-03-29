@@ -10,6 +10,7 @@ type NewAddress struct {
 	State            *string `json:"state"`
 	AditionalDetails *string `json:"aditionalDetails"`
 	Distance         *string `json:"distance"`
+	IsDefault        *bool   `json:"isDefault"`
 }
 
 type Address struct {
@@ -24,6 +25,7 @@ type Address struct {
 	State            *string `json:"state"`
 	AditionalDetails *string `json:"aditionalDetails"`
 	Distance         *string `json:"distance"`
+	IsDefault        *bool   `json:"isDefault"`
 }
 
 type AddressRepository interface {

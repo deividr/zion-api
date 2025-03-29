@@ -98,8 +98,8 @@ func main() {
 		}
 
 		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO addresses (old_id, customer_id, cep, street, adr_number, neighborhood, city, adr_state, aditional_details, distance) 
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+			`INSERT INTO addresses (old_id, customer_id, cep, street, number, neighborhood, city, state, aditional_details, distance, is_default) 
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 			address.OldId,
 			address.Id,
 			address.Cep,
@@ -110,6 +110,7 @@ func main() {
 			address.State,
 			address.AditionalDetails,
 			distance,
+			true,
 		)
 
 		if err != nil {
