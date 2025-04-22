@@ -42,6 +42,7 @@ func main() {
 
 	productRoutes(protected, dbPool)
 	customerRoutes(protected, dbPool)
+	addressRoutes(protected, dbPool)
 
 	r.Run(":8000")
 }
@@ -80,4 +81,18 @@ func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	router.PUT("/customers/:id", customerController.Update)
 	router.DELETE("/customers/:id", customerController.Delete)
 	router.POST("/customers", customerController.Create)
+}
+
+func addressRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
+	// Setup repositories
+	addressRepo := postgres.NewPgAddressRepository(pool)
+	addressUseCase := usecase.NewAddressUseCase(addressRepo)
+
+	// Setup controllers
+	addressController := controllers.NewAddressController(addressUseCase)
+
+	router.GET("/addresses/:id", addressController.GetById)
+	router.PUT("/addresses/:id", addressController.Update)
+	router.DELETE("/addresses/:id", addressController.Delete)
+	router.POST("/addresses", addressController.Create)
 }

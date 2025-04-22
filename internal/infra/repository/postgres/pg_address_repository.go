@@ -256,7 +256,7 @@ func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Addr
 	errQuery := r.db.QueryRow(context.Background(), insertBuilder, args...).Scan(&id)
 
 	if errQuery != nil {
-		return nil, fmt.Errorf("erro ao criar endereço: %v", errQB)
+		return nil, fmt.Errorf("erro ao criar endereço: %v", errQuery)
 	}
 
 	createdAddress := &domain.Address{
