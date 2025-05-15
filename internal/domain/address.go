@@ -9,7 +9,7 @@ type NewAddress struct {
 	City             *string `json:"city"`
 	State            *string `json:"state"`
 	AditionalDetails *string `json:"aditionalDetails"`
-	Distance         int     `json:"distance"`
+	Distance         *string `json:"distance"`
 	IsDefault        *bool   `json:"isDefault"`
 }
 
@@ -24,7 +24,7 @@ type Address struct {
 	City             *string `json:"city"`
 	State            *string `json:"state"`
 	AditionalDetails *string `json:"aditionalDetails"`
-	Distance         int     `json:"distance"`
+	Distance         *string `json:"distance"`
 	IsDefault        *bool   `json:"isDefault"`
 }
 
