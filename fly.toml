@@ -1,5 +1,5 @@
 app = 'zion-api'
-primary_region = 'iad'
+primary_region = 'gru'
 
 [build]
   [build.args]
