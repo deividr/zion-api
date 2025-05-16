@@ -15,15 +15,15 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func convertDistanceToInt8(distanceStr string) (int8, error) {
+func convertDistanceToInt8(distanceStr string) (int, error) {
 	cleanStr := strings.TrimSpace(strings.ReplaceAll(distanceStr, "km", ""))
 
 	distance, err := strconv.ParseFloat(cleanStr, 64)
 	if err != nil {
-		return 0, fmt.Errorf("Error ao converter distância")
+		return 0, fmt.Errorf("Error ao converter distância: %v", err)
 	}
 
-	return int8(distance * 10), nil
+	return int(distance * 10), nil
 }
 
 func main() {
@@ -63,6 +63,7 @@ func main() {
 
 	for results.Next() {
 		var address domain.Address
+		var distanceStr string
 
 		err3 := results.Scan(
 			&address.OldId,
@@ -74,21 +75,20 @@ func main() {
 			&address.City,
 			&address.State,
 			&address.AditionalDetails,
-			&address.Distance,
+			&distanceStr,
 		)
+
 		if err3 != nil {
 			fmt.Println("Erro no scan", err3)
 			continue
 		}
 
-		distance := int8(0)
-
-		if address.Distance != nil {
-			result, err := convertDistanceToInt8(*address.Distance)
+		if distanceStr != "" {
+			result, err := convertDistanceToInt8(distanceStr)
 			if err != nil {
 				continue
 			}
-			distance = result
+			address.Distance = &result
 		}
 
 		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.Id).Scan(&address.Id)
@@ -109,7 +109,7 @@ func main() {
 			address.City,
 			address.State,
 			address.AditionalDetails,
-			distance,
+			address.Distance,
 			true,
 		)
 
