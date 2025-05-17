@@ -31,7 +31,7 @@ type Address struct {
 type AddressRepository interface {
 	FindAll(Pagination) ([]Address, Pagination, error)
 	FindById(id string) (*Address, error)
-	FindBy(filters map[string]interface{}) ([]Address, error)
+	FindBy(filters map[string]any) ([]Address, error)
 	Update(Address) error
 	Delete(id string) error
 	Create(product NewAddress) (*Address, error)

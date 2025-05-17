@@ -111,7 +111,7 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 			state,
 			aditional_details,
 			distance,
-			is_default,
+			is_default
 		FROM addresses 
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
