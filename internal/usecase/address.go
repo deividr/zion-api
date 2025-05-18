@@ -16,7 +16,6 @@ func NewAddressUseCase(repo domain.AddressRepository) *AddressUseCase {
 
 func (uc *AddressUseCase) GetAll(pagination domain.Pagination) ([]domain.Address, domain.Pagination, error) {
 	addresses, pagination, err := uc.repo.FindAll(pagination)
-
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("error fetching addresses: %v", err)
 	}
@@ -72,6 +71,7 @@ func (uc *AddressUseCase) Delete(id string) error {
 		if err != nil {
 			return fmt.Errorf("error fetching addresses: %v", err)
 		}
+
 		if len(addressesDb) > 0 {
 			for _, address := range addressesDb {
 				if address.Id == id {
@@ -96,18 +96,18 @@ func (uc *AddressUseCase) Delete(id string) error {
 }
 
 func (uc *AddressUseCase) Create(newAddress domain.NewAddress) (*domain.Address, error) {
-	if newAddress.IsDefault != nil && *newAddress.IsDefault {
-		addressDb, errFind := uc.repo.FindBy(map[string]any{"customer_id": newAddress.CustomerId, "is_default": true, "is_deleted": false})
-		if errFind != nil {
-			return nil, fmt.Errorf("error fetching address by id: %v", errFind)
-		}
+	addresses, errFind := uc.repo.FindBy(map[string]any{"customer_id": newAddress.CustomerId, "is_default": true, "is_deleted": false})
+	if errFind != nil {
+		return nil, fmt.Errorf("error fetching address by id: %v", errFind)
+	}
 
-		if len(addressDb) > 0 {
-			addressDb[0].IsDefault = &[]bool{false}[0]
-			if err := uc.repo.Update(addressDb[0]); err != nil {
-				return nil, fmt.Errorf("error update old default address to not default: %v", errFind)
-			}
+	if len(addresses) > 0 && *newAddress.IsDefault {
+		addresses[0].IsDefault = &[]bool{false}[0]
+		if err := uc.repo.Update(addresses[0]); err != nil {
+			return nil, fmt.Errorf("error update old default address to not default: %v", errFind)
 		}
+	} else if len(addresses) == 0 {
+		newAddress.IsDefault = &[]bool{true}[0]
 	}
 
 	createdAddress, err := uc.repo.Create(newAddress)
