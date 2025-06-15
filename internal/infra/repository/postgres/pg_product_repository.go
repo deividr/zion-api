@@ -41,7 +41,7 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 	}
 
 	query, args, err := baseQuery.
-		Select("id", "name", "value", "unity_type").
+		Select("id", "name", "value", "unity_type", "category_id").
 		From("products").
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset)).
@@ -66,6 +66,7 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 			&product.Name,
 			&product.Value,
 			&product.UnityType,
+			&product.CategoryId,
 		)
 		if err != nil {
 			return nil, domain.Pagination{}, fmt.Errorf("erro ao ler produto: %v", err)
@@ -82,7 +83,7 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 	var product domain.Product
 	err := r.db.QueryRow(context.Background(), `
-		SELECT id, name, value, unity_type 
+		SELECT id, name, value, unity_type, category_id
 		FROM products 
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
@@ -90,6 +91,7 @@ func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 		&product.Name,
 		&product.Value,
 		&product.UnityType,
+		&product.CategoryId,
 	)
 
 	if err != nil {

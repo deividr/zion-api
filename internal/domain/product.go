@@ -16,9 +16,9 @@ type Product struct {
 }
 
 type FindAllProductFilters struct {
-	Name        string
-	Unity_type  string
-	Category_id string
+	Name       string
+	UnityType  string
+	CategoryId string
 }
 
 type ProductRepository interface {
