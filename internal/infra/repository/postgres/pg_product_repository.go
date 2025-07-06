@@ -46,7 +46,6 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset)).
 		ToSql()
-
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query: %v", err)
 	}
@@ -93,7 +92,6 @@ func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 		&product.UnityType,
 		&product.CategoryId,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("produto não encontrado: %v", err)
 	}
@@ -106,9 +104,9 @@ func (r *PgProductRepository) Update(product domain.Product) error {
 		Update("products").Set("name", product.Name).
 		Set("value", product.Value).
 		Set("unity_type", product.UnityType).
+		Set("category_id", product.CategoryId).
 		Where(squirrel.Eq{"id": product.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
-
 	if err != nil {
 		return fmt.Errorf("erro ao construir query para atualizar o produto: %v", err)
 	}
@@ -133,8 +131,8 @@ func (r *PgProductRepository) Delete(id string) error {
 
 func (r *PgProductRepository) Create(newProduct domain.NewProduct) (*domain.Product, error) {
 	insertBuilder, args, errQB := r.qb.Insert("products").
-		Columns("name", "value", "unity_type").
-		Values(&newProduct.Name, &newProduct.Value, &newProduct.UnityType).
+		Columns("name", "value", "unity_type", "category_id").
+		Values(&newProduct.Name, &newProduct.Value, &newProduct.UnityType, &newProduct.CategoryId).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -150,10 +148,11 @@ func (r *PgProductRepository) Create(newProduct domain.NewProduct) (*domain.Prod
 	}
 
 	createdProduct := &domain.Product{
-		Id:        id,
-		Name:      newProduct.Name,
-		Value:     newProduct.Value,
-		UnityType: newProduct.UnityType,
+		Id:         id,
+		Name:       newProduct.Name,
+		Value:      newProduct.Value,
+		UnityType:  newProduct.UnityType,
+		CategoryId: newProduct.CategoryId,
 	}
 
 	return createdProduct, nil

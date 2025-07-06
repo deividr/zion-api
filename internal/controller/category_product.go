@@ -29,7 +29,7 @@ func (c *CategoryProductController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, gin.H{"categories": categories})
+	ctx.IndentedJSON(http.StatusOK, categories)
 }
 
 func (c *CategoryProductController) GetById(ctx *gin.Context) {
