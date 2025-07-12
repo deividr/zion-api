@@ -104,13 +104,6 @@ func main() {
 		progressbar.OptionSetPredictTime(true),
 		progressbar.OptionFullWidth(),
 		progressbar.OptionSetRenderBlankState(true),
-		// progressbar.OptionSetTheme(progressbar.Theme{
-		// 	Saucer:        "[green]=[reset]",
-		// 	SaucerHead:    "[green]>[reset]",
-		// 	SaucerPadding: " ",
-		// 	BarStart:      "[",
-		// 	BarEnd:        "]",
-		// }),
 	)
 
 	successCount := 0

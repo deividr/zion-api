@@ -44,7 +44,6 @@ func main() {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", user, password, host, port, dbname)
 
 	dbOldPool, err := sql.Open("mysql", dsn)
-
 	if err != nil {
 		fmt.Println("Erro na conexão com o banco MySql", err)
 		return
@@ -73,7 +72,6 @@ func main() {
 		_, err = dbNewPool.Exec(context.Background(),
 			`INSERT INTO products (old_id, name, value, unity_type) VALUES ($1, $2, $3, $4)`,
 			product.OldId, product.Name, product.Value, product.UnityType)
-
 		if err != nil {
 			fmt.Println("Erro ao inserir no PostgreSQL: ", err)
 			continue
