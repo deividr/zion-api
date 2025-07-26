@@ -30,5 +30,5 @@ type CustomerRepository interface {
 	FindById(id string) (*Customer, error)
 	Update(Customer) error
 	Delete(id string) error
-	Create(product NewCustomer) (*Customer, error)
+	Create(customer NewCustomer) (*Customer, error)
 }

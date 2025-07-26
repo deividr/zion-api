@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -29,7 +31,7 @@ func main() {
 		return
 	}
 
-	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL_LOAD"))
 	if err != nil {
 		fmt.Println("Erro ao conectar no PostgreSQL:", err)
 		return
@@ -106,36 +108,42 @@ func main() {
 		progressbar.OptionSetRenderBlankState(true),
 	)
 
-	successCount := 0
-	errorCount := 0
+	var successCount int64
+	var errorCount int64
+	var wg sync.WaitGroup
 
 	for _, customer := range customers {
-		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO customers (name, phone, phone2, email, old_id, created_at) 
-			 VALUES ($1, $2, $3, $4, $5, $6)`,
-			customer.Name,
-			customer.Phone,
-			customer.Phone2,
-			customer.Email,
-			customer.OldId,
-			customer.CreatedAt,
-		)
+		wg.Add(1)
+		go func(customer Customer) {
+			defer wg.Done()
+			defer bar.Add(1)
 
-		if err != nil {
-			fmt.Printf("Erro ao inserir cliente no PostgreSQL: %v\n", err)
-			break
-		} else {
-			successCount++
-		}
+			_, err = dbNewPool.Exec(context.Background(),
+				`INSERT INTO customers (name, phone, phone2, email, old_id, created_at) 
+				 VALUES ($1, $2, $3, $4, $5, $6)`,
+				customer.Name,
+				customer.Phone,
+				customer.Phone2,
+				customer.Email,
+				customer.OldId,
+				customer.CreatedAt,
+			)
 
-		bar.Add(1)
+			if err != nil {
+				fmt.Printf("Erro ao inserir cliente no PostgreSQL: %v\n", err)
+				atomic.AddInt64(&errorCount, 1)
+			} else {
+				atomic.AddInt64(&successCount, 1)
+			}
+		}(customer)
 	}
 
+	wg.Wait()
 	bar.Finish()
 
 	fmt.Printf("\n\n=== ESTATÍSTICAS FINAIS ===\n")
 	fmt.Printf("Total processados: %d\n", totalCount)
-	fmt.Printf("Sucessos: %d\n", successCount)
-	fmt.Printf("Erros: %d\n", errorCount)
-	fmt.Printf("Taxa de sucesso: %.2f%%\n", float64(successCount)/float64(totalCount)*100)
+	fmt.Printf("Sucessos: %d\n", atomic.LoadInt64(&successCount))
+	fmt.Printf("Erros: %d\n", atomic.LoadInt64(&errorCount))
+	fmt.Printf("Taxa de sucesso: %.2f%%\n", float64(atomic.LoadInt64(&successCount))/float64(totalCount)*100)
 }
