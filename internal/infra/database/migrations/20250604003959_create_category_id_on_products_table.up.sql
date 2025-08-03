@@ -1,1 +1,1 @@
-ALTER TABLE products ADD COLUMN category_id UUID REFERENCES category_products(id);
+ALTER TABLE products ADD COLUMN "category_id" UUID REFERENCES category_products (id);

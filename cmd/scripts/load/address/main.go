@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/deividr/zion-api/internal/domain"
 
@@ -33,7 +35,7 @@ func main() {
 		return
 	}
 
-	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL_LOAD"))
 	if err != nil {
 		fmt.Println("Erro ao conectar no PostgreSQL:", err)
 		return
@@ -109,11 +111,16 @@ func main() {
 		progressbar.OptionSetRenderBlankState(true),
 	)
 
-	for _, address := range oldAddresses {
-		err4 := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.CustomerId).Scan(&address.CustomerId)
-		if err4 != nil {
-			fmt.Println("Erro no select do customer", err4)
-			break
+	var successCount int64
+	var errorCount int64
+	wg := sync.WaitGroup{}
+
+	processAddress := func(address domain.Address) {
+		err := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.CustomerId).Scan(&address.CustomerId)
+		if err != nil {
+			fmt.Println("Erro no select do customer", err)
+			atomic.AddInt64(&errorCount, 1)
+			return
 		}
 
 		_, err = dbNewPool.Exec(context.Background(),
@@ -133,9 +140,29 @@ func main() {
 		)
 		if err != nil {
 			fmt.Println("Erro ao inserir endereço no PostgreSQL: ", err)
-			break
+			atomic.AddInt64(&errorCount, 1)
+			return
 		}
 
-		bar.Add(1)
+		atomic.AddInt64(&successCount, 1)
 	}
+
+	for _, address := range oldAddresses {
+		wg.Add(1)
+
+		go func(address domain.Address) {
+			defer wg.Done()
+			defer bar.Add(1)
+			processAddress(address)
+		}(address)
+	}
+
+	wg.Wait()
+	bar.Finish()
+
+	fmt.Printf("\n\n=== ESTATÍSTICAS FINAIS ===\n")
+	fmt.Printf("Total processados: %d\n", len(oldAddresses))
+	fmt.Printf("Sucessos: %d\n", atomic.LoadInt64(&successCount))
+	fmt.Printf("Erros: %d\n", atomic.LoadInt64(&errorCount))
+	fmt.Printf("Taxa de sucesso: %.2f%%\n", float64((atomic.LoadInt64(&successCount)/int64(len(oldAddresses)))*100))
 }

@@ -1,7 +1,7 @@
 CREATE TABLE addresses (
     id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
     old_id int,
-    customer_id uuid NOT NULL,
+    customer_id uuid NOT NULL REFERENCES customers (id),
     cep text NOT NULL,
     street text NOT NULL,
     number text NOT NULL,

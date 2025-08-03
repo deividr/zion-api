@@ -9,6 +9,9 @@ migrate_up:
 migrate_down:
 	migrate -path=internal/infra/database/migrations -database "${DATABASE_URL_MIGRATE}" -verbose down
 
+migrate_down_last:
+	migrate -path=internal/infra/database/migrations -database "${DATABASE_URL_MIGRATE}" -verbose down 1
+
 load_products:
 	go run cmd/scripts/load/products/main.go
 
@@ -18,4 +21,7 @@ load_customers:
 load_addresses:
 	go run cmd/scripts/load/address/main.go
 
-.PHONY: create_migration migrate_up migrate_down load_products load_customers load_addresses
+load_orders:
+	go run cmd/scripts/load/orders/main.go
+
+.PHONY: create_migration migrate_up migrate_down migrate_down_one load_products load_customers load_addresses load_orders

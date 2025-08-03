@@ -5,10 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
+	"sync/atomic"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/schollz/progressbar/v3"
 )
 
 type Product struct {
@@ -26,9 +29,9 @@ func main() {
 		return
 	}
 
-	fmt.Println(os.Getenv("DATABASE_URL"))
+	fmt.Println(os.Getenv("DATABASE_URL_LOAD"))
 
-	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbNewPool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL_LOAD"))
 	if err != nil {
 		fmt.Println("Erro ao conectar no PostgreSQL:", err)
 		return
@@ -51,33 +54,56 @@ func main() {
 	defer dbOldPool.Close()
 
 	results, err2 := dbOldPool.Query("select cd_produto, nm_produto, st_unidade, vl_produto from produto;")
-
 	if err2 != nil {
 		fmt.Println("Erro na query", err2)
 		return
 	}
 
+	var products []Product
+
 	for results.Next() {
 		var product Product
 		var floatValue float64
 
-		err3 := results.Scan(&product.OldId, &product.Name, &product.UnityType, &floatValue)
-		if err3 != nil {
-			fmt.Println("Erro no scan", err3)
+		err := results.Scan(&product.OldId, &product.Name, &product.UnityType, &floatValue)
+		if err != nil {
+			fmt.Println("Erro no scan", err)
 			continue
 		}
 
 		product.Value = uint32(floatValue * 100)
+		products = append(products, product)
+	}
 
-		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO products (old_id, name, value, unity_type) VALUES ($1, $2, $3, $4)`,
-			product.OldId, product.Name, product.Value, product.UnityType)
-		if err != nil {
-			fmt.Println("Erro ao inserir no PostgreSQL: ", err)
-			continue
-		}
+	bar := progressbar.NewOptions(len(products),
+		progressbar.OptionSetDescription("Processando pedidos"),
+		progressbar.OptionSetWidth(50),
+		progressbar.OptionShowCount(),
+		progressbar.OptionShowIts(),
+		progressbar.OptionSetPredictTime(true),
+		progressbar.OptionFullWidth(),
+		progressbar.OptionSetRenderBlankState(true),
+	)
 
-		fmt.Printf("Produto inserido com sucesso: %+v\n", product.Name)
+	var successCount int64
+	var errorCount int64
+	wg := sync.WaitGroup{}
+
+	for _, product := range products {
+		wg.Add(1)
+		go func(product Product) {
+			defer wg.Done()
+			_, err = dbNewPool.Exec(context.Background(),
+				`INSERT INTO products (old_id, name, value, unity_type) VALUES ($1, $2, $3, $4)`,
+				product.OldId, product.Name, product.Value, product.UnityType)
+			if err != nil {
+				atomic.AddInt64(&errorCount, 1)
+				fmt.Println("Erro ao inserir no PostgreSQL: ", err)
+				return
+			}
+
+			atomic.AddInt64(&successCount, 1)
+		}(product)
 	}
 
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Diversos') WHERE category_id IS NULL;`)
@@ -86,4 +112,12 @@ func main() {
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Massas') WHERE unity_type = 'KG' ;`)
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Bebidas') WHERE name ~* '(coca|fanta|guarana|tubaina|suco|água|vinho)';`)
 	dbNewPool.Exec(context.Background(), `ALTER TABLE products ALTER COLUMN category_id SET NOT NULL;`)
+
+	bar.Finish()
+
+	fmt.Printf("\n\n=== ESTATÍSTICAS FINAIS ===\n")
+	fmt.Printf("Total processados: %d\n", len(products))
+	fmt.Printf("Sucessos: %d\n", atomic.LoadInt64(&successCount))
+	fmt.Printf("Erros: %d\n", atomic.LoadInt64(&errorCount))
+	fmt.Printf("Taxa de sucesso: %.2f%%\n", float64(atomic.LoadInt64(&successCount))/float64(len(products))*100)
 }
