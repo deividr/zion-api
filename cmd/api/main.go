@@ -45,6 +45,7 @@ func main() {
 	customerRoutes(protected, dbPool)
 	addressRoutes(protected, dbPool)
 	categoryRoutes(protected, dbPool)
+	orderRoutes(protected, dbPool)
 
 	r.Run(":8000")
 }
@@ -113,4 +114,21 @@ func categoryRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	router.GET("/categories/:id", categoryController.GetById)
 	router.PUT("/categories/:id", categoryController.Update)
 	router.DELETE("/categories/:id", categoryController.Delete)
+}
+
+func orderRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
+	// Setup repositories
+	orderRepo := postgres.NewPgOrderRepository(pool)
+
+	// Setup use cases
+	orderUseCase := usecase.NewOrderUseCase(orderRepo)
+
+	// Setup controllers
+	orderController := controllers.NewOrderController(orderUseCase)
+
+	router.GET("/orders", orderController.GetAll)
+	router.GET("/orders/:id", orderController.GetById)
+	router.PUT("/orders/:id", orderController.Update)
+	router.DELETE("/orders/:id", orderController.Delete)
+	router.POST("/orders", orderController.Create)
 }

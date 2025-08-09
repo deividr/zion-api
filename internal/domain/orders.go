@@ -4,9 +4,9 @@ import "time"
 
 type NewOrder struct {
 	Number       string     `json:"number"`
-	PickupDate   *time.Time `json:"pickupDate"`
+	PickupDate   time.Time  `json:"pickupDate"`
 	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
+	UpdatedAt    *time.Time `json:"updatedAt"`
 	CustomerId   string     `json:"customerId"`
 	EmployeeId   string     `json:"employeeId"`
 	OrderLocal   *string    `json:"orderLocal"`
@@ -17,9 +17,9 @@ type NewOrder struct {
 type Order struct {
 	Id           string     `json:"id"`
 	Number       string     `json:"number"`
-	PickupDate   *time.Time `json:"withdraw"`
-	CreatedAt    *time.Time `json:"createdAt"`
-	UpdatedAt    time.Time  `json:"updatedAt"`
+	PickupDate   time.Time  `json:"withdraw"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    *time.Time `json:"updatedAt"`
 	CustomerId   string     `json:"customerId"`
 	EmployeeId   string     `json:"employeeId"`
 	OrderLocal   *string    `json:"orderLocal"`
@@ -36,6 +36,11 @@ type OrderProduct struct {
 	Price     int    `json:"price"`
 }
 
+type FullOrderProduct struct {
+	OrderProduct OrderProduct
+	SubProducts  []OrderSubProduct
+}
+
 type OrderSubProduct struct {
 	Id             string `json:"id"`
 	OrderProductId string `json:"orderProductId"`
@@ -44,6 +49,8 @@ type OrderSubProduct struct {
 
 type FindAllOrderFilters struct {
 	PickupDate *time.Time
+	CustomerId string
+	ProductId  string
 }
 
 type OrderRepository interface {
