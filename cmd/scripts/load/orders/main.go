@@ -66,18 +66,18 @@ func main() {
 		       ip.cd_produto AS "item_cd_produto",
 		       ip.cd_molho AS "item_cd_molho",
            CAST(
-						CASE 
-							WHEN p2.st_unidade = 'UN' THEN
-								CASE
-									WHEN MOD(ip.vl_quantidade, 1) != 0 THEN CEIL(ip.vl_quantidade)
-									ELSE ip.vl_quantidade
-								END
-							WHEN ip.vl_quantidade < 10 THEN 
-								ROUND(ip.vl_quantidade * 1000)
-							ELSE
-								ip.vl_quantidade
-						END AS SIGNED
-					) AS "item_vl_quantidade"
+		       CASE
+					WHEN p2.st_unidade = 'UN' THEN
+						CASE
+							WHEN MOD(ip.vl_quantidade, 1) != 0 THEN CEIL(ip.vl_quantidade)
+							ELSE ip.vl_quantidade
+						END
+					WHEN ip.vl_quantidade < 10 THEN
+						ROUND(ip.vl_quantidade * 1000)
+					ELSE
+						ip.vl_quantidade
+				END AS SIGNED
+			) AS "item_vl_quantidade"
 	  FROM pedido p
 	  INNER JOIN item_pedido ip ON ip.cd_pedido = p.cd_pedido
 	  INNER JOIN produto p2 ON p2.cd_produto = ip.cd_produto
@@ -124,10 +124,10 @@ func main() {
 			order.Id = newOrderId
 
 			if pickupDate.Valid {
-				order.PickupDate = &pickupDate.Time
+				order.PickupDate = pickupDate.Time
 			}
 			if createdAt.Valid {
-				order.CreatedAt = &createdAt.Time
+				order.CreatedAt = createdAt.Time
 			}
 			orders = append(orders, order)
 		}
@@ -186,7 +186,7 @@ func main() {
 		}
 
 		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO orders (id, order_number, pickup_date, created_at, customer_id, employee_id, order_local, observations, is_picked_up) 
+			`INSERT INTO orders (id, order_number, pickup_date, created_at, customer_id, employee_id, order_local, observations, is_picked_up)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 			order.Id,
 			order.Number,
@@ -269,6 +269,7 @@ func main() {
 		wg.Add(1)
 		go func(o domain.Order) {
 			defer wg.Done()
+			defer bar.Add(1)
 
 			// 1. Processa a ordem principal
 			processOrder(o)
@@ -286,8 +287,6 @@ func main() {
 					}
 				}
 			}
-
-			bar.Add(1)
 		}(order)
 	}
 

@@ -17,7 +17,7 @@ type NewOrder struct {
 type Order struct {
 	Id           string     `json:"id"`
 	Number       string     `json:"number"`
-	PickupDate   time.Time  `json:"withdraw"`
+	PickupDate   time.Time  `json:"pickupDate"`
 	CreatedAt    time.Time  `json:"createdAt"`
 	UpdatedAt    *time.Time `json:"updatedAt"`
 	CustomerId   string     `json:"customerId"`
