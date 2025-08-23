@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/deividr/zion-api/internal/domain"
 	"github.com/google/uuid"
@@ -19,6 +20,8 @@ import (
 )
 
 func main() {
+	loc, _ := time.LoadLocation("America/Sao_Paulo")
+
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("Erro ao carregar .env: ", err)
 		return
@@ -124,11 +127,15 @@ func main() {
 			order.Id = newOrderId
 
 			if pickupDate.Valid {
-				order.PickupDate = pickupDate.Time
+				t := pickupDate.Time
+				saoPauloTime := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, loc)
+				order.PickupDate = saoPauloTime.UTC()
 			}
+
 			if createdAt.Valid {
-				order.CreatedAt = createdAt.Time
+				order.CreatedAt = createdAt.Time.In(loc).UTC()
 			}
+
 			orders = append(orders, order)
 		}
 
