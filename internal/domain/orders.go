@@ -3,28 +3,20 @@ package domain
 import "time"
 
 type NewOrder struct {
-	Number       string     `json:"number"`
-	PickupDate   time.Time  `json:"pickupDate"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    *time.Time `json:"updatedAt"`
-	CustomerId   string     `json:"customerId"`
-	EmployeeId   string     `json:"employeeId"`
-	OrderLocal   *string    `json:"orderLocal"`
-	Observations *string    `json:"observations"`
-	IsPickedUp   *bool      `json:"isPickedUp"`
+	PickupDate   time.Time `json:"pickupDate"`
+	Customer     Customer  `json:"customer"`
+	Employee     string    `json:"employee"`
+	OrderLocal   *string   `json:"orderLocal"`
+	Observations *string   `json:"observations"`
+	IsPickedUp   *bool     `json:"isPickedUp"`
 }
 
 type Order struct {
-	Id           string     `json:"id"`
-	Number       string     `json:"number"`
-	PickupDate   time.Time  `json:"pickupDate"`
-	CreatedAt    time.Time  `json:"createdAt"`
-	UpdatedAt    *time.Time `json:"updatedAt"`
-	CustomerId   string     `json:"customerId"`
-	EmployeeId   string     `json:"employeeId"`
-	OrderLocal   *string    `json:"orderLocal"`
-	Observations *string    `json:"observations"`
-	IsPickedUp   *bool      `json:"isPickedUp"`
+	NewOrder
+	Id        string     `json:"id"`
+	Number    string     `json:"number"`
+	CreatedAt time.Time  `json:"createdAt"`
+	UpdatedAt *time.Time `json:"updatedAt"`
 }
 
 type OrderProduct struct {
@@ -36,11 +28,6 @@ type OrderProduct struct {
 	Price     int    `json:"price"`
 }
 
-type FullOrderProduct struct {
-	OrderProduct OrderProduct
-	SubProducts  []OrderSubProduct
-}
-
 type OrderSubProduct struct {
 	Id             string `json:"id"`
 	OrderProductId string `json:"orderProductId"`
@@ -49,8 +36,8 @@ type OrderSubProduct struct {
 
 type FindAllOrderFilters struct {
 	PickupDate *time.Time
-	CustomerId string
-	ProductId  string
+	CustomerId *string
+	ProductId  *string
 }
 
 type OrderRepository interface {

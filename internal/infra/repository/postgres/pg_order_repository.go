@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
@@ -21,35 +22,107 @@ func NewPgOrderRepository(db *pgxpool.Pool) *PgOrderRepository {
 	}
 }
 
+// // Main data query builder
+// productsQuery := `COALESCE(
+// 	(SELECT
+// 		JSON_AGG(
+// 			JSON_BUILD_OBJECT(
+// 				'id', op.id,
+// 				'orderId', op.order_id,
+// 				'productId', op.product_id,
+// 				'quantity', op.quantity,
+// 				'unityType', op.unity_type,
+// 				'price', op.price,
+// 				'subProducts', (
+// 					SELECT COALESCE(JSON_AGG(
+// 						JSON_BUILD_OBJECT(
+// 							'id', osp.id,
+// 							'orderProductId', osp.order_product_id,
+// 							'productId', osp.product_id
+// 						)
+// 					), '[]'::json)
+// 					FROM order_sub_products osp
+// 					WHERE osp.order_product_id = op.id
+// 				)
+// 			)
+// 		)
+// 	FROM order_products op
+// 	WHERE op.order_id = o.id),
+// 	'[]'::json
+// ) AS products_json`
+
 func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain.FindAllOrderFilters) ([]domain.Order, domain.Pagination, error) {
 	offset := pagination.Limit * (pagination.Page - 1)
 
-	baseQuery := r.qb.
-		Where(squirrel.Eq{"is_deleted": false})
-
-	totalCountQuery, totalCountArgs, err := baseQuery.
-		Select("count(*)").
+	baseBuilder := r.qb.
+		Select().
 		From("orders o").
-		ToSql()
+		Where(squirrel.Eq{"o.is_deleted": false})
+
+	if filters.CustomerId != nil {
+		baseBuilder = baseBuilder.Where(squirrel.Eq{"o.customer_id": filters.CustomerId})
+	}
+	if filters.PickupDate != nil {
+		baseBuilder = baseBuilder.Where(squirrel.Eq{"o.pickup_date": filters.PickupDate})
+	}
+
+	countBuilder := baseBuilder.Column("count(DISTINCT o.id)")
+	if filters.ProductId != nil {
+		countBuilder = countBuilder.
+			Join("order_products op_filter ON op_filter.order_id = o.id").
+			Where(squirrel.Eq{"op_filter.product_id": filters.ProductId})
+	}
+
+	totalCountQuery, totalCountArgs, err := countBuilder.ToSql()
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("error building total query: %w", err)
 	}
 
 	var totalCount int
-
 	err = r.db.QueryRow(context.Background(), totalCountQuery, totalCountArgs...).Scan(&totalCount)
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("error fetching total number of orders: %v", err)
 	}
 
-	query, args, err := baseQuery.
-		Select("id", "order_number", "pickup_date", "created_at", "updated_at", "customer_id", "employee_id", "order_local", "observations", "is_picked_up").
-		From("orders").
+	customerQuery := `(
+		SELECT
+			JSON_BUILD_OBJECT(
+				'id', c.id,
+				'name', c.name,
+				'phone', c.phone,
+				'phone2', c.phone,
+				'email', c.email,
+				'createdAt', to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+			)
+		FROM customers c
+		WHERE c.id = o.customer_id
+	) AS customer`
+
+	queryBuilder := baseBuilder.
+		Columns(
+			"o.id",
+			"o.order_number",
+			"o.pickup_date",
+			"o.created_at",
+			"o.updated_at",
+			"o.employee_id",
+			"o.order_local",
+			"o.observations",
+			"o.is_picked_up",
+		).
+		Column(customerQuery).
+		OrderBy("o.created_at DESC").
 		Limit(uint64(pagination.Limit)).
-		Offset(uint64(offset)).
-		ToSql()
+		Offset(uint64(offset))
+
+	if filters.ProductId != nil {
+		queryBuilder = queryBuilder.
+			Where("EXISTS (SELECT 1 FROM order_products op WHERE op.order_id = o.id AND op.product_id = ?)", filters.ProductId)
+	}
+
+	query, args, err := queryBuilder.ToSql()
 	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("error building query: %v", err)
+		return nil, domain.Pagination{}, fmt.Errorf("error building fetch orders query: %w", err)
 	}
 
 	rows, err := r.db.Query(context.Background(), query, args...)
@@ -58,31 +131,39 @@ func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain
 	}
 	defer rows.Close()
 
+	// Process rows
 	var orders []domain.Order
-
 	for rows.Next() {
 		var order domain.Order
-		err := rows.Scan(
+		var customerJson []byte
+
+		if err := rows.Scan(
 			&order.Id,
 			&order.Number,
 			&order.PickupDate,
 			&order.CreatedAt,
 			&order.UpdatedAt,
-			&order.CustomerId,
-			&order.EmployeeId,
+			&order.Employee,
 			&order.OrderLocal,
 			&order.Observations,
 			&order.IsPickedUp,
-		)
-		if err != nil {
-			return nil, domain.Pagination{}, fmt.Errorf("error reading customer: %v", err)
+			&customerJson,
+		); err != nil {
+			return nil, domain.Pagination{}, fmt.Errorf("error scanning order data: %w", err)
+		}
+
+		if err := json.Unmarshal(customerJson, &order.Customer); err != nil {
+			return nil, domain.Pagination{}, fmt.Errorf("error unmarshaling order customer: %w", err)
 		}
 
 		orders = append(orders, order)
 	}
 
-	pagination.Total = totalCount
+	if err = rows.Err(); err != nil {
+		return nil, domain.Pagination{}, fmt.Errorf("error iterating order rows: %w", err)
+	}
 
+	pagination.Total = totalCount
 	return orders, pagination, nil
 }
 
@@ -98,13 +179,12 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 		&order.PickupDate,
 		&order.CreatedAt,
 		&order.UpdatedAt,
-		&order.CustomerId,
-		&order.EmployeeId,
+		&order.Customer.Id,
+		&order.Employee,
 		&order.OrderLocal,
 		&order.Observations,
 		&order.IsPickedUp,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("order not found: %v", err)
 	}
@@ -121,7 +201,6 @@ func (r *PgOrderRepository) Update(order domain.Order) error {
 		Set("is_picked_up", order.IsPickedUp).
 		Where(squirrel.Eq{"id": order.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
-
 	if err != nil {
 		return fmt.Errorf("error building query to update customer: %v", err)
 	}
@@ -147,7 +226,7 @@ func (r *PgOrderRepository) Delete(id string) error {
 func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, error) {
 	insertBuilder, args, errQB := r.qb.Insert("orders").
 		Columns("number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up").
-		Values(&newOrder.Number, &newOrder.PickupDate, &newOrder.CustomerId, &newOrder.EmployeeId, &newOrder.OrderLocal, &newOrder.Observations, &newOrder.IsPickedUp).
+		Values(500, &newOrder.PickupDate, &newOrder.Customer.Id, &newOrder.Employee, &newOrder.OrderLocal, &newOrder.Observations, &newOrder.IsPickedUp).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -162,16 +241,9 @@ func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, err
 		return nil, fmt.Errorf("error creating order: %v", errQB)
 	}
 
-	createdOrder := &domain.Order{
-		Id:           id,
-		Number:       newOrder.Number,
-		PickupDate:   newOrder.PickupDate,
-		CustomerId:   newOrder.CustomerId,
-		EmployeeId:   newOrder.EmployeeId,
-		OrderLocal:   newOrder.OrderLocal,
-		Observations: newOrder.Observations,
-		IsPickedUp:   newOrder.IsPickedUp,
-	}
-
-	return createdOrder, nil
+	return &domain.Order{
+		NewOrder: newOrder,
+		Id:       id,
+		Number:   "500", // TODO: get number from sequence
+	}, nil
 }

@@ -17,7 +17,7 @@ func NewOrderUseCase(repo domain.OrderRepository) *OrderUseCase {
 func (uc *OrderUseCase) GetAll(pagination domain.Pagination, filters domain.FindAllOrderFilters) ([]domain.Order, domain.Pagination, error) {
 	orders, pagination, err := uc.repo.FindAll(pagination, filters)
 	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("error fetching orders: %v", err)
+		return []domain.Order{}, domain.Pagination{}, fmt.Errorf("error fetching orders: %v", err)
 	}
 
 	return orders, pagination, nil
@@ -49,7 +49,6 @@ func (uc *OrderUseCase) Delete(id string) error {
 
 func (uc *OrderUseCase) Create(newOrder domain.NewOrder) (*domain.Order, error) {
 	createdOrder, err := uc.repo.Create(newOrder)
-
 	if err != nil {
 		return nil, fmt.Errorf("error creating order: %v", err)
 	}

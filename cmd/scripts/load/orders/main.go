@@ -107,7 +107,7 @@ func main() {
 			&order.Number,
 			&pickupDate,
 			&createdAt,
-			&order.CustomerId,
+			&order.Customer.Id,
 			&order.OrderLocal,
 			&order.Observations,
 			&order.IsPickedUp,
@@ -184,8 +184,8 @@ func main() {
 	processOrder := func(order domain.Order) {
 		err := dbNewPool.QueryRow(context.Background(),
 			`SELECT id FROM customers WHERE old_id = $1`,
-			order.CustomerId,
-		).Scan(&order.CustomerId)
+			order.Customer.Id,
+		).Scan(&order.Customer.Id)
 		if err != nil {
 			fmt.Printf("Erro ao obter Customer para pedido %s: %v", order.Number, err)
 			atomic.AddInt64(&errorCount, 1)
@@ -199,8 +199,8 @@ func main() {
 			order.Number,
 			order.PickupDate,
 			order.CreatedAt,
-			order.CustomerId,
-			order.EmployeeId,
+			order.Customer.Id,
+			order.Employee,
 			order.OrderLocal,
 			order.Observations,
 			order.IsPickedUp,
