@@ -3,6 +3,7 @@ package controllers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/deividr/zion-api/internal/domain"
 	"github.com/deividr/zion-api/internal/infra/logger"
@@ -35,7 +36,21 @@ func (c *OrderController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	orders, pagination, err := c.useCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllOrderFilters{})
+	search := ctx.Query("search")
+
+	pickupDateStart, err := time.Parse(time.RFC3339, ctx.Query("pickupDateStart"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pickupDateStart params"})
+		return
+	}
+
+	pickupDateEnd, err := time.Parse(time.RFC3339, ctx.Query("pickupDateEnd"))
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pickupDateEnd params"})
+		return
+	}
+
+	orders, pagination, err := c.useCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllOrderFilters{Search: &search, PickupDateStart: pickupDateStart, PickupDateEnd: pickupDateEnd})
 	if err != nil {
 		c.logger.Error("Error fetching orders", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Fetching orders fatal failed"})

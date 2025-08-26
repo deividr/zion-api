@@ -57,21 +57,19 @@ func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain
 	baseBuilder := r.qb.
 		Select().
 		From("orders o").
-		Where(squirrel.Eq{"o.is_deleted": false})
+		Where(squirrel.Eq{"o.is_deleted": false}).
+		Where(squirrel.Expr("o.pickup_date BETWEEN ? AND ?", filters.PickupDateStart, filters.PickupDateEnd))
 
-	if filters.CustomerId != nil {
-		baseBuilder = baseBuilder.Where(squirrel.Eq{"o.customer_id": filters.CustomerId})
-	}
-	if filters.PickupDate != nil {
-		baseBuilder = baseBuilder.Where(squirrel.Eq{"o.pickup_date": filters.PickupDate})
+	if filters.Search != nil {
+		baseBuilder = baseBuilder.
+			Join("customers c ON c.id = o.customer_id").
+			Where(squirrel.Or{
+				squirrel.ILike{"c.name": fmt.Sprintf("%%%s%%", *filters.Search)},
+				squirrel.ILike{"c.phone": fmt.Sprintf("%%%s%%", *filters.Search)},
+			})
 	}
 
 	countBuilder := baseBuilder.Column("count(DISTINCT o.id)")
-	if filters.ProductId != nil {
-		countBuilder = countBuilder.
-			Join("order_products op_filter ON op_filter.order_id = o.id").
-			Where(squirrel.Eq{"op_filter.product_id": filters.ProductId})
-	}
 
 	totalCountQuery, totalCountArgs, err := countBuilder.ToSql()
 	if err != nil {
@@ -111,14 +109,9 @@ func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain
 			"o.is_picked_up",
 		).
 		Column(customerQuery).
-		OrderBy("o.created_at DESC").
+		OrderBy("o.pickup_date DESC").
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset))
-
-	if filters.ProductId != nil {
-		queryBuilder = queryBuilder.
-			Where("EXISTS (SELECT 1 FROM order_products op WHERE op.order_id = o.id AND op.product_id = ?)", filters.ProductId)
-	}
 
 	query, args, err := queryBuilder.ToSql()
 	if err != nil {

@@ -35,9 +35,9 @@ type OrderSubProduct struct {
 }
 
 type FindAllOrderFilters struct {
-	PickupDate *time.Time
-	CustomerId *string
-	ProductId  *string
+	PickupDateStart time.Time
+	PickupDateEnd   time.Time
+	Search          *string
 }
 
 type OrderRepository interface {
