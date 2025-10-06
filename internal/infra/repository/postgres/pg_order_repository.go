@@ -23,33 +23,6 @@ func NewPgOrderRepository(db *pgxpool.Pool) *PgOrderRepository {
 }
 
 // // Main data query builder
-// productsQuery := `COALESCE(
-// 	(SELECT
-// 		JSON_AGG(
-// 			JSON_BUILD_OBJECT(
-// 				'id', op.id,
-// 				'orderId', op.order_id,
-// 				'productId', op.product_id,
-// 				'quantity', op.quantity,
-// 				'unityType', op.unity_type,
-// 				'price', op.price,
-// 				'subProducts', (
-// 					SELECT COALESCE(JSON_AGG(
-// 						JSON_BUILD_OBJECT(
-// 							'id', osp.id,
-// 							'orderProductId', osp.order_product_id,
-// 							'productId', osp.product_id
-// 						)
-// 					), '[]'::json)
-// 					FROM order_sub_products osp
-// 					WHERE osp.order_product_id = op.id
-// 				)
-// 			)
-// 		)
-// 	FROM order_products op
-// 	WHERE op.order_id = o.id),
-// 	'[]'::json
-// ) AS products_json`
 
 func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain.FindAllOrderFilters) ([]domain.Order, domain.Pagination, error) {
 	offset := pagination.Limit * (pagination.Page - 1)
@@ -162,24 +135,78 @@ func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain
 
 func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 	var order domain.Order
+	var customerJSON, productsJSON string
+
 	err := r.db.QueryRow(context.Background(), `
-		SELECT id, number, pickup_date, created_at, updated_at, customer_id, employee_id, order_local, observations, is_picked_up
-		FROM orders
-		WHERE id = $1 AND is_deleted = false
+		SELECT o.id,
+			   o.order_number,
+			   o.pickup_date,
+			   o.created_at,
+			   o.updated_at,
+			   o.employee_id,
+			   o.order_local,
+			   o.observations,
+			   o.is_picked_up,
+			   JSON_BUILD_OBJECT(
+				   'id', c.id,
+				   'name', c.name,
+				   'phone', c.phone,
+				   'phone2', c.phone2,
+				   'email', c.email
+			   ) AS customer,
+			   COALESCE((
+				   SELECT JSON_AGG(
+					   JSON_BUILD_OBJECT(
+						   'id', op.id,
+						   'orderId', op.order_id,
+						   'productId', op.product_id,
+						   'quantity', op.quantity,
+						   'unityType', op.unity_type,
+						   'price', op.price,
+						   'subProducts', COALESCE((
+							   SELECT JSON_AGG(
+								   JSON_BUILD_OBJECT(
+									   'id', osp.id,
+									   'orderProductId', osp.order_product_id,
+									   'productId', osp.product_id
+								   )
+							   )
+							   FROM order_sub_products osp
+							   WHERE osp.order_product_id = op.id
+						   ), '[]'::json)
+					   )
+				   )
+				   FROM order_products op
+				   WHERE op.order_id = o.id
+			   ), '[]'::json) AS products
+		FROM orders o
+		JOIN customers c ON c.id = o.customer_id
+		WHERE o.id = $1 AND o.is_deleted = false
 	`, id).Scan(
 		&order.Id,
 		&order.Number,
 		&order.PickupDate,
 		&order.CreatedAt,
 		&order.UpdatedAt,
-		&order.Customer.Id,
 		&order.Employee,
 		&order.OrderLocal,
 		&order.Observations,
 		&order.IsPickedUp,
+		&customerJSON,
+		&productsJSON,
 	)
 	if err != nil {
+		fmt.Println("Erro no scan do resultado", err)
 		return nil, fmt.Errorf("order not found: %v", err)
+	}
+
+	// Parse JSON results
+	if err := json.Unmarshal([]byte(customerJSON), &order.Customer); err != nil {
+		return nil, fmt.Errorf("error parsing customer JSON: %v", err)
+	}
+
+	if err := json.Unmarshal([]byte(productsJSON), &order.Products); err != nil {
+		return nil, fmt.Errorf("error parsing products JSON: %v", err)
 	}
 
 	return &order, nil

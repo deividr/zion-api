@@ -3,12 +3,13 @@ package domain
 import "time"
 
 type NewOrder struct {
-	PickupDate   time.Time `json:"pickupDate"`
-	Customer     Customer  `json:"customer"`
-	Employee     string    `json:"employee"`
-	OrderLocal   *string   `json:"orderLocal"`
-	Observations *string   `json:"observations"`
-	IsPickedUp   *bool     `json:"isPickedUp"`
+	PickupDate   time.Time      `json:"pickupDate"`
+	Customer     Customer       `json:"customer"`
+	Employee     string         `json:"employee"`
+	OrderLocal   *string        `json:"orderLocal"`
+	Observations *string        `json:"observations"`
+	IsPickedUp   *bool          `json:"isPickedUp"`
+	Products     []OrderProduct `json:"products"`
 }
 
 type Order struct {
@@ -20,12 +21,13 @@ type Order struct {
 }
 
 type OrderProduct struct {
-	Id        string `json:"id"`
-	OrderId   string `json:"orderId"`
-	ProductId string `json:"productId"`
-	Quantity  int    `json:"quantity"`
-	UnityType string `json:"unityType"`
-	Price     int    `json:"price"`
+	Id          string            `json:"id"`
+	OrderId     string            `json:"orderId"`
+	ProductId   string            `json:"productId"`
+	Quantity    int               `json:"quantity"`
+	UnityType   string            `json:"unityType"`
+	Price       int               `json:"price"`
+	SubProducts []OrderSubProduct `json:"subProducts"`
 }
 
 type OrderSubProduct struct {

@@ -11,6 +11,7 @@ import (
 
 	controllers "github.com/deividr/zion-api/internal/controller"
 	"github.com/deividr/zion-api/internal/infra/database"
+	ordersControllers "github.com/deividr/zion-api/internal/infra/factory/controllers/orders"
 	"github.com/deividr/zion-api/internal/infra/repository/postgres"
 	"github.com/deividr/zion-api/internal/middleware"
 	"github.com/deividr/zion-api/internal/usecase"
@@ -126,8 +127,10 @@ func orderRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	// Setup controllers
 	orderController := controllers.NewOrderController(orderUseCase)
 
+	orderByIdController := ordersControllers.GetOrderByIdControllerFactory(pool)
+
 	router.GET("/orders", orderController.GetAll)
-	router.GET("/orders/:id", orderController.GetById)
+	router.GET("/orders/:id", orderByIdController.Handle)
 	router.PUT("/orders/:id", orderController.Update)
 	router.DELETE("/orders/:id", orderController.Delete)
 	router.POST("/orders", orderController.Create)

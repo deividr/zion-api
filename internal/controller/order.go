@@ -60,18 +60,6 @@ func (c *OrderController) GetAll(ctx *gin.Context) {
 	ctx.IndentedJSON(http.StatusOK, gin.H{"orders": orders, "pagination": pagination})
 }
 
-func (c *OrderController) GetById(ctx *gin.Context) {
-	id := ctx.Param("id")
-
-	order, err := c.useCase.GetById(id)
-	if err != nil {
-		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Order not found"})
-		return
-	}
-
-	ctx.IndentedJSON(http.StatusOK, order)
-}
-
 func (c *OrderController) Update(ctx *gin.Context) {
 	var order domain.Order
 	if err := ctx.BindJSON(&order); err != nil {

@@ -73,7 +73,6 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 		products = append(products, product)
 	}
 
-	// Update pagination with total count
 	pagination.Total = totalCount
 
 	return products, pagination, nil
@@ -83,7 +82,7 @@ func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 	var product domain.Product
 	err := r.db.QueryRow(context.Background(), `
 		SELECT id, name, value, unity_type, category_id
-		FROM products 
+		FROM products
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
 		&product.Id,

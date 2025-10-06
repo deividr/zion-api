@@ -301,11 +301,11 @@ func main() {
 	bar.Finish()
 
 	fmt.Printf(" === ESTATÍSTICAS FINAIS === ")
-	fmt.Printf("Total de pedidos únicos processados: %d", len(orders))
-	fmt.Printf("Sucessos: %d", atomic.LoadInt64(&successCount))
-	fmt.Printf("Erros: %d", atomic.LoadInt64(&errorCount))
+	fmt.Printf("Total de pedidos únicos processados: %d\n", len(orders))
+	fmt.Printf("Sucessos: %d\n", atomic.LoadInt64(&successCount))
+	fmt.Printf("Erros: %d\n", atomic.LoadInt64(&errorCount))
 	if len(orders) > 0 {
 		successRate := float64(atomic.LoadInt64(&successCount)) / float64(len(orders)) * 100
-		fmt.Printf("Taxa de sucesso: %.2f%%", successRate)
+		fmt.Printf("Taxa de sucesso: %.2f%%\n", successRate)
 	}
 }

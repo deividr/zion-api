@@ -106,11 +106,11 @@ func main() {
 		}(product)
 	}
 
-	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Diversos') WHERE category_id IS NULL;`)
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Bebidas') WHERE unity_type = 'LT';`)
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Saladas') WHERE name ILIKE '{%maionese%,%\salpicão%}';`)
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Massas') WHERE unity_type = 'KG' ;`)
 	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Bebidas') WHERE name ~* '(coca|fanta|guarana|tubaina|suco|água|vinho)';`)
+	dbNewPool.Exec(context.Background(), `UPDATE products SET category_id = (SELECT id FROM category_products WHERE name = 'Diversos') WHERE category_id IS NULL;`)
 	dbNewPool.Exec(context.Background(), `ALTER TABLE products ALTER COLUMN category_id SET NOT NULL;`)
 
 	bar.Finish()
