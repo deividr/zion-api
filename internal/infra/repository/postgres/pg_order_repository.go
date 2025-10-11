@@ -136,6 +136,7 @@ func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain
 func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 	var order domain.Order
 	var customerJSON, productsJSON string
+	var addressJSON *string
 
 	err := r.db.QueryRow(context.Background(), `
 		SELECT o.id,
@@ -147,6 +148,21 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 			   o.order_local,
 			   o.observations,
 			   o.is_picked_up,
+			   CASE
+				   WHEN a.id IS NULL THEN NULL
+				   ELSE JSON_BUILD_OBJECT(
+					   'id', a.id,
+					   'cep', a.cep,
+					   'street', a.street,
+					   'number', a.number,
+					   'neighborhood', a.neighborhood,
+					   'city', a.city,
+					   'state', a.state,
+					   'aditionalDetails', a.aditional_details,
+					   'distance', a.distance,
+					   'isDefault', a.is_default
+				   )
+			   END AS address,
 			   JSON_BUILD_OBJECT(
 				   'id', c.id,
 				   'name', c.name,
@@ -185,6 +201,7 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 			   ), '[]'::json) AS products
 		FROM orders o
 		JOIN customers c ON c.id = o.customer_id
+		LEFT JOIN addresses a ON a.id = o.address_id
 		WHERE o.id = $1 AND o.is_deleted = false
 	`, id).Scan(
 		&order.Id,
@@ -196,6 +213,7 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 		&order.OrderLocal,
 		&order.Observations,
 		&order.IsPickedUp,
+		&addressJSON,
 		&customerJSON,
 		&productsJSON,
 	)
@@ -204,7 +222,12 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 		return nil, fmt.Errorf("order not found: %v", err)
 	}
 
-	// Parse JSON results
+	if addressJSON != nil {
+		if err := json.Unmarshal([]byte(*addressJSON), &order.Address); err != nil {
+			return nil, fmt.Errorf("error parsing address JSON: %v", err)
+		}
+	}
+
 	if err := json.Unmarshal([]byte(customerJSON), &order.Customer); err != nil {
 		return nil, fmt.Errorf("error parsing customer JSON: %v", err)
 	}

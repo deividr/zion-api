@@ -5,6 +5,7 @@ import "time"
 type NewOrder struct {
 	PickupDate   time.Time      `json:"pickupDate"`
 	Customer     Customer       `json:"customer"`
+	Address      *Address       `json:"address"`
 	Employee     string         `json:"employee"`
 	OrderLocal   *string        `json:"orderLocal"`
 	Observations *string        `json:"observations"`
