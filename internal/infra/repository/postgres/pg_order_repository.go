@@ -22,8 +22,6 @@ func NewPgOrderRepository(db *pgxpool.Pool) *PgOrderRepository {
 	}
 }
 
-// // Main data query builder
-
 func (r *PgOrderRepository) FindAll(pagination domain.Pagination, filters domain.FindAllOrderFilters) ([]domain.Order, domain.Pagination, error) {
 	offset := pagination.Limit * (pagination.Page - 1)
 

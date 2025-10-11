@@ -156,6 +156,39 @@ func main() {
 	results.Close()
 	dbOldPool.Close()
 
+	// Buscar produtos que contêm "ENTREGA" no nome e obter seus old_id
+	deliveryProductsQuery := `SELECT old_id FROM products WHERE UPPER(name) LIKE '%ENTREGA%'`
+	deliveryRows, err := dbNewPool.Query(context.Background(), deliveryProductsQuery)
+	if err != nil {
+		fmt.Println("Erro ao buscar produtos com ENTREGA:", err)
+		return
+	}
+
+	deliveryProductIds := make(map[int]bool)
+	for deliveryRows.Next() {
+		var oldId int
+		if err := deliveryRows.Scan(&oldId); err != nil {
+			fmt.Println("Erro ao escanear old_id de produto com ENTREGA:", err)
+			continue
+		}
+		deliveryProductIds[oldId] = true
+	}
+	deliveryRows.Close()
+
+	// Criar um map para armazenar quais orders precisam de endereço
+	ordersNeedingAddress := make(map[string]bool)
+
+	// Verificar quais orders têm produtos com entrega
+	for _, product := range order_products {
+		oldProductId, err := strconv.Atoi(product.ProductId)
+		if err != nil {
+			continue
+		}
+		if deliveryProductIds[oldProductId] {
+			ordersNeedingAddress[product.OrderId] = true
+		}
+	}
+
 	// Agrupar produtos e subprodutos por seus respectivos IDs de pedido/produto
 	orderProductsMap := make(map[string][]domain.OrderProduct)
 	for _, p := range order_products {
@@ -181,20 +214,41 @@ func main() {
 	var errorCount int64
 	wg := sync.WaitGroup{}
 
-	processOrder := func(order domain.Order) {
+	processOrder := func(order domain.Order, needsAddress bool) {
 		err := dbNewPool.QueryRow(context.Background(),
 			`SELECT id FROM customers WHERE old_id = $1`,
 			order.Customer.Id,
 		).Scan(&order.Customer.Id)
 		if err != nil {
-			fmt.Printf("Erro ao obter Customer para pedido %s: %v", order.Number, err)
+			fmt.Printf("Erro ao obter Customer para pedido %s: %v\n", order.Number, err)
 			atomic.AddInt64(&errorCount, 1)
 			return
 		}
 
+		var addressId *string
+
+		// Se a order precisa de endereço, buscar o endereço principal do customer
+		if needsAddress {
+			var addr string
+			err := dbNewPool.QueryRow(context.Background(),
+				`SELECT a.id
+				 FROM addresses a
+				 INNER JOIN address_customers ac ON ac.address_id = a.id
+				 WHERE ac.customer_id = $1 AND a.is_default = true AND a.is_deleted = false
+				 LIMIT 1`,
+				order.Customer.Id,
+			).Scan(&addr)
+			if err != nil {
+				fmt.Printf("Aviso: Endereço principal não encontrado para customer %s no pedido %s: %v\n", order.Customer.Id, order.Number, err)
+				// Não retornamos erro aqui, apenas logamos e continuamos sem endereço
+			} else {
+				addressId = &addr
+			}
+		}
+
 		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO orders (id, order_number, pickup_date, created_at, customer_id, employee_id, order_local, observations, is_picked_up)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+			`INSERT INTO orders (id, order_number, pickup_date, created_at, customer_id, employee_id, order_local, observations, is_picked_up, address_id)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 			order.Id,
 			order.Number,
 			order.PickupDate,
@@ -204,9 +258,10 @@ func main() {
 			order.OrderLocal,
 			order.Observations,
 			order.IsPickedUp,
+			addressId,
 		)
 		if err != nil {
-			fmt.Printf("Erro ao inserir Order %s: %v", order.Number, err)
+			fmt.Printf("Erro ao inserir Order %s: %v\n", order.Number, err)
 			atomic.AddInt64(&errorCount, 1)
 			return
 		}
@@ -279,7 +334,8 @@ func main() {
 			defer bar.Add(1)
 
 			// 1. Processa a ordem principal
-			processOrder(o)
+			needsAddress := ordersNeedingAddress[o.Id]
+			processOrder(o, needsAddress)
 
 			// 2. Processa os produtos associados
 			if orderProduct, ok := orderProductsMap[o.Id]; ok {
