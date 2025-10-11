@@ -61,7 +61,7 @@ func (c *CustomerController) GetById(ctx *gin.Context) {
 		return
 	}
 
-	addresses, err := c.addressUseCase.GetBy(map[string]interface{}{"customer_id": customer.Id})
+	addresses, err := c.addressUseCase.GetByCustomerId(customer.Id)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		fmt.Println(err)
 		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Error to get address by customer id"})

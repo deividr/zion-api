@@ -49,7 +49,6 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 			"state",
 			"aditional_details",
 			"distance",
-			"is_default",
 		).
 		From("addresses").
 		Limit(uint64(pagination.Limit)).
@@ -80,7 +79,6 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 			&address.State,
 			&address.AditionalDetails,
 			&address.Distance,
-			&address.IsDefault,
 		)
 		if err != nil {
 			return nil, domain.Pagination{}, fmt.Errorf("error on read address informations: %v", err)
@@ -107,8 +105,7 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 			city,
 			state,
 			aditional_details,
-			distance,
-			is_default
+			distance
 		FROM addresses
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
@@ -122,7 +119,6 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 		&address.State,
 		&address.AditionalDetails,
 		&address.Distance,
-		&address.IsDefault,
 	)
 
 	if err != nil {
@@ -144,7 +140,6 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 		"state",
 		"aditional_details",
 		"distance",
-		"is_default",
 	).From("addresses").Where(squirrel.Eq{"is_deleted": false})
 
 	for key, value := range filters {
@@ -159,6 +154,57 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 	rows, err := r.db.Query(context.Background(), query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error searching addresses: %w", err)
+	}
+	defer rows.Close()
+
+	var addresses []domain.Address
+
+	for rows.Next() {
+		var address domain.Address
+		err := rows.Scan(
+			&address.Id,
+			&address.OldId,
+			&address.Cep,
+			&address.Street,
+			&address.Number,
+			&address.Neighborhood,
+			&address.City,
+			&address.State,
+			&address.AditionalDetails,
+			&address.Distance,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error reading address information: %w", err)
+		}
+		addresses = append(addresses, address)
+	}
+
+	return addresses, nil
+}
+
+func (r *PgAddressRepository) FindByCustomerId(customerId string) ([]domain.Address, error) {
+	query := `
+		SELECT
+			a.id,
+			a.old_id,
+			a.cep,
+			a.street,
+			a.number,
+			a.neighborhood,
+			a.city,
+			a.state,
+			a.aditional_details,
+			a.distance,
+			ac.is_default
+		FROM addresses a
+		INNER JOIN address_customers ac ON a.id = ac.address_id
+		WHERE ac.customer_id = $1 AND a.is_deleted = false
+		ORDER BY ac.is_default DESC
+	`
+
+	rows, err := r.db.Query(context.Background(), query, customerId)
+	if err != nil {
+		return nil, fmt.Errorf("error searching addresses by customer id: %w", err)
 	}
 	defer rows.Close()
 
@@ -199,7 +245,6 @@ func (r *PgAddressRepository) Update(address domain.Address) error {
 		Set("state", address.State).
 		Set("aditional_details", address.AditionalDetails).
 		Set("distance", address.Distance).
-		Set("is_default", address.IsDefault).
 		Where(squirrel.Eq{"id": address.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
 
@@ -227,7 +272,7 @@ func (r *PgAddressRepository) Delete(id string) error {
 
 func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Address, error) {
 	insertBuilder, args, errQB := r.qb.Insert("addresses").
-		Columns("cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance", "is_default").
+		Columns("cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance").
 		Values(
 			&newAddress.Cep,
 			&newAddress.Street,
@@ -236,8 +281,7 @@ func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Addr
 			&newAddress.City,
 			&newAddress.State,
 			&newAddress.AditionalDetails,
-			&newAddress.Distance,
-			&newAddress.IsDefault).
+			&newAddress.Distance).
 		Suffix("RETURNING id").
 		ToSql()
 

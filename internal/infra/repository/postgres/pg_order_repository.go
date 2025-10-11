@@ -157,8 +157,7 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 					   'city', a.city,
 					   'state', a.state,
 					   'aditionalDetails', a.aditional_details,
-					   'distance', a.distance,
-					   'isDefault', a.is_default
+					   'distance', a.distance
 				   )
 			   END AS address,
 			   JSON_BUILD_OBJECT(

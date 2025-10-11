@@ -39,19 +39,15 @@ func (uc *AddressUseCase) GetBy(filters map[string]any) ([]domain.Address, error
 	return address, nil
 }
 
+func (uc *AddressUseCase) GetByCustomerId(customerId string) ([]domain.Address, error) {
+	addresses, err := uc.repo.FindByCustomerId(customerId)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching addresses by customer id: %v", err)
+	}
+	return addresses, nil
+}
+
 func (uc *AddressUseCase) Update(address domain.Address) error {
-	addressDb, errFind := uc.repo.FindBy(map[string]any{"is_default": true, "is_deleted": false})
-	if errFind != nil {
-		return fmt.Errorf("error fetching address by id: %v", errFind)
-	}
-
-	if len(addressDb) > 0 && addressDb[0].Id != address.Id {
-		addressDb[0].IsDefault = &[]bool{false}[0]
-		if err := uc.repo.Update(addressDb[0]); err != nil {
-			return fmt.Errorf("error update old default address to not default: %v", errFind)
-		}
-	}
-
 	err := uc.repo.Update(address)
 	if err != nil {
 		return fmt.Errorf("error on update address informations: %v", err)
@@ -61,33 +57,6 @@ func (uc *AddressUseCase) Update(address domain.Address) error {
 }
 
 func (uc *AddressUseCase) Delete(id string) error {
-	addressDb, errFind := uc.repo.FindById(id)
-	if errFind != nil {
-		return fmt.Errorf("error fetching address by id: %v", errFind)
-	}
-
-	if addressDb.IsDefault != nil && *addressDb.IsDefault {
-		addressesDb, err := uc.repo.FindBy(map[string]any{"is_deleted": false})
-		if err != nil {
-			return fmt.Errorf("error fetching addresses: %v", err)
-		}
-
-		if len(addressesDb) > 0 {
-			for _, address := range addressesDb {
-				if address.Id == id {
-					continue
-				}
-
-				address.IsDefault = &[]bool{true}[0]
-				if err := uc.repo.Update(address); err != nil {
-					return fmt.Errorf("error update address to default: %v", err)
-				}
-
-				break
-			}
-		}
-	}
-
 	if err := uc.repo.Delete(id); err != nil {
 		return fmt.Errorf("error on delete address: %v", err)
 	}
@@ -96,20 +65,6 @@ func (uc *AddressUseCase) Delete(id string) error {
 }
 
 func (uc *AddressUseCase) Create(newAddress domain.NewAddress) (*domain.Address, error) {
-	addresses, errFind := uc.repo.FindBy(map[string]any{"is_default": true, "is_deleted": false})
-	if errFind != nil {
-		return nil, fmt.Errorf("error fetching address by id: %v", errFind)
-	}
-
-	if len(addresses) > 0 && *newAddress.IsDefault {
-		addresses[0].IsDefault = &[]bool{false}[0]
-		if err := uc.repo.Update(addresses[0]); err != nil {
-			return nil, fmt.Errorf("error update old default address to not default: %v", errFind)
-		}
-	} else if len(addresses) == 0 {
-		newAddress.IsDefault = &[]bool{true}[0]
-	}
-
 	createdAddress, err := uc.repo.Create(newAddress)
 	if err != nil {
 		return nil, fmt.Errorf("error on create address: %v", err)
