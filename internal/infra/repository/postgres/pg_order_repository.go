@@ -163,20 +163,24 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 						   'quantity', op.quantity,
 						   'unityType', op.unity_type,
 						   'price', op.price,
+						   'name', p.name,
 						   'subProducts', COALESCE((
 							   SELECT JSON_AGG(
 								   JSON_BUILD_OBJECT(
 									   'id', osp.id,
 									   'orderProductId', osp.order_product_id,
-									   'productId', osp.product_id
+									   'productId', osp.product_id,
+									   'name', p.name
 								   )
 							   )
 							   FROM order_sub_products osp
+							   JOIN products p ON p.id = osp.product_id
 							   WHERE osp.order_product_id = op.id
 						   ), '[]'::json)
 					   )
 				   )
 				   FROM order_products op
+				   JOIN products p ON p.id = op.product_id
 				   WHERE op.order_id = o.id
 			   ), '[]'::json) AS products
 		FROM orders o

@@ -27,6 +27,7 @@ type OrderProduct struct {
 	Quantity    int               `json:"quantity"`
 	UnityType   string            `json:"unityType"`
 	Price       int               `json:"price"`
+	Name        string            `json:"name"`
 	SubProducts []OrderSubProduct `json:"subProducts"`
 }
 
@@ -34,6 +35,7 @@ type OrderSubProduct struct {
 	Id             string `json:"id"`
 	OrderProductId string `json:"orderProductId"`
 	ProductId      string `json:"productId"`
+	Name           string `json:"name"`
 }
 
 type FindAllOrderFilters struct {
