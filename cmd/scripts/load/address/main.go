@@ -131,8 +131,8 @@ func main() {
 		// Inserir o endereço e obter o ID gerado
 		var addressId string
 		err := dbNewPool.QueryRow(context.Background(),
-			`INSERT INTO addresses (old_id, cep, street, number, neighborhood, city, state, aditional_details, distance, is_default)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			`INSERT INTO addresses (old_id, cep, street, number, neighborhood, city, state, aditional_details, distance)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 			 RETURNING id`,
 			address.OldId,
 			address.Cep,
@@ -143,7 +143,6 @@ func main() {
 			address.State,
 			address.AditionalDetails,
 			address.Distance,
-			true,
 		).Scan(&addressId)
 		if err != nil {
 			fmt.Println("Erro ao inserir endereço no PostgreSQL: ", err)
@@ -162,10 +161,11 @@ func main() {
 			}
 
 			_, err = dbNewPool.Exec(context.Background(),
-				`INSERT INTO address_customers (address_id, customer_id)
+				`INSERT INTO address_customers (address_id, customer_id, is_default)
 				 VALUES ($1, $2)`,
 				addressId,
 				customerId,
+				true,
 			)
 			if err != nil {
 				fmt.Println("Erro ao inserir relacionamento address_customer:", err)
