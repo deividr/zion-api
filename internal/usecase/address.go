@@ -40,7 +40,7 @@ func (uc *AddressUseCase) GetBy(filters map[string]any) ([]domain.Address, error
 }
 
 func (uc *AddressUseCase) Update(address domain.Address) error {
-	addressDb, errFind := uc.repo.FindBy(map[string]any{"customer_id": address.CustomerId, "is_default": true, "is_deleted": false})
+	addressDb, errFind := uc.repo.FindBy(map[string]any{"is_default": true, "is_deleted": false})
 	if errFind != nil {
 		return fmt.Errorf("error fetching address by id: %v", errFind)
 	}
@@ -67,7 +67,7 @@ func (uc *AddressUseCase) Delete(id string) error {
 	}
 
 	if addressDb.IsDefault != nil && *addressDb.IsDefault {
-		addressesDb, err := uc.repo.FindBy(map[string]any{"customer_id": addressDb.CustomerId, "is_deleted": false})
+		addressesDb, err := uc.repo.FindBy(map[string]any{"is_deleted": false})
 		if err != nil {
 			return fmt.Errorf("error fetching addresses: %v", err)
 		}
@@ -96,7 +96,7 @@ func (uc *AddressUseCase) Delete(id string) error {
 }
 
 func (uc *AddressUseCase) Create(newAddress domain.NewAddress) (*domain.Address, error) {
-	addresses, errFind := uc.repo.FindBy(map[string]any{"customer_id": newAddress.CustomerId, "is_default": true, "is_deleted": false})
+	addresses, errFind := uc.repo.FindBy(map[string]any{"is_default": true, "is_deleted": false})
 	if errFind != nil {
 		return nil, fmt.Errorf("error fetching address by id: %v", errFind)
 	}

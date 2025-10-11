@@ -62,15 +62,21 @@ func main() {
 		return
 	}
 
-	var oldAddresses []domain.Address
+	type AddressWithCustomer struct {
+		Address       domain.Address
+		OldCustomerId *string
+	}
+
+	var oldAddresses []AddressWithCustomer
 
 	for results.Next() {
 		var address domain.Address
+		var oldCustomerId *string
 		var distanceStr *string
 
 		err := results.Scan(
 			&address.OldId,
-			&address.CustomerId,
+			&oldCustomerId,
 			&address.Cep,
 			&address.Street,
 			&address.Number,
@@ -95,7 +101,10 @@ func main() {
 			address.Distance = &zero
 		}
 
-		oldAddresses = append(oldAddresses, address)
+		oldAddresses = append(oldAddresses, AddressWithCustomer{
+			Address:       address,
+			OldCustomerId: oldCustomerId,
+		})
 	}
 
 	results.Close()
@@ -115,19 +124,17 @@ func main() {
 	var errorCount int64
 	wg := sync.WaitGroup{}
 
-	processAddress := func(address domain.Address) {
-		err := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, address.CustomerId).Scan(&address.CustomerId)
-		if err != nil {
-			fmt.Println("Erro no select do customer", err)
-			atomic.AddInt64(&errorCount, 1)
-			return
-		}
+	processAddress := func(addrWithCustomer AddressWithCustomer) {
+		address := addrWithCustomer.Address
+		oldCustomerId := addrWithCustomer.OldCustomerId
 
-		_, err = dbNewPool.Exec(context.Background(),
-			`INSERT INTO addresses (old_id, customer_id, cep, street, number, neighborhood, city, state, aditional_details, distance, is_default) 
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		// Inserir o endereço e obter o ID gerado
+		var addressId string
+		err := dbNewPool.QueryRow(context.Background(),
+			`INSERT INTO addresses (old_id, cep, street, number, neighborhood, city, state, aditional_details, distance, is_default)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+			 RETURNING id`,
 			address.OldId,
-			address.CustomerId,
 			address.Cep,
 			address.Street,
 			address.Number,
@@ -137,24 +144,47 @@ func main() {
 			address.AditionalDetails,
 			address.Distance,
 			true,
-		)
+		).Scan(&addressId)
 		if err != nil {
 			fmt.Println("Erro ao inserir endereço no PostgreSQL: ", err)
 			atomic.AddInt64(&errorCount, 1)
 			return
 		}
 
+		// Se tiver customer_id, criar o relacionamento
+		if oldCustomerId != nil {
+			var customerId string
+			err := dbNewPool.QueryRow(context.Background(), `SELECT id FROM customers WHERE old_id = $1`, oldCustomerId).Scan(&customerId)
+			if err != nil {
+				fmt.Println("Erro ao buscar customer_id:", err)
+				atomic.AddInt64(&errorCount, 1)
+				return
+			}
+
+			_, err = dbNewPool.Exec(context.Background(),
+				`INSERT INTO address_customers (address_id, customer_id)
+				 VALUES ($1, $2)`,
+				addressId,
+				customerId,
+			)
+			if err != nil {
+				fmt.Println("Erro ao inserir relacionamento address_customer:", err)
+				atomic.AddInt64(&errorCount, 1)
+				return
+			}
+		}
+
 		atomic.AddInt64(&successCount, 1)
 	}
 
-	for _, address := range oldAddresses {
+	for _, addrWithCustomer := range oldAddresses {
 		wg.Add(1)
 
-		go func(address domain.Address) {
+		go func(addrWithCustomer AddressWithCustomer) {
 			defer wg.Done()
 			defer bar.Add(1)
-			processAddress(address)
-		}(address)
+			processAddress(addrWithCustomer)
+		}(addrWithCustomer)
 	}
 
 	wg.Wait()

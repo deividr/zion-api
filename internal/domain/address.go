@@ -1,7 +1,6 @@
 package domain
 
 type NewAddress struct {
-	CustomerId       string  `json:"customerId"`
 	Cep              string  `json:"cep"`
 	Street           *string `json:"street"`
 	Number           *string `json:"number"`
@@ -16,7 +15,6 @@ type NewAddress struct {
 type Address struct {
 	Id               string  `json:"id"`
 	OldId            *string `json:"oldId"`
-	CustomerId       string  `json:"customerId"`
 	Cep              string  `json:"cep"`
 	Street           *string `json:"street"`
 	Number           *string `json:"number"`

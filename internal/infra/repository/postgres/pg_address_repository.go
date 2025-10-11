@@ -41,7 +41,6 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 	query, args, err := baseQuery.
 		Select(
 			"id",
-			"customer_id",
 			"cep",
 			"street",
 			"number",
@@ -73,7 +72,6 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 		var address domain.Address
 		err := rows.Scan(
 			&address.Id,
-			&address.CustomerId,
 			&address.Cep,
 			&address.Street,
 			&address.Number,
@@ -102,7 +100,6 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 		SELECT
 			id,
 			old_id,
-			customer_id,
 			cep,
 			street,
 			number,
@@ -112,12 +109,11 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 			aditional_details,
 			distance,
 			is_default
-		FROM addresses 
+		FROM addresses
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
 		&address.Id,
 		&address.OldId,
-		&address.CustomerId,
 		&address.Cep,
 		&address.Street,
 		&address.Number,
@@ -140,7 +136,6 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 	baseQuery := r.qb.Select(
 		"id",
 		"old_id",
-		"customer_id",
 		"cep",
 		"street",
 		"number",
@@ -174,7 +169,6 @@ func (r *PgAddressRepository) FindBy(filters map[string]interface{}) ([]domain.A
 		err := rows.Scan(
 			&address.Id,
 			&address.OldId,
-			&address.CustomerId,
 			&address.Cep,
 			&address.Street,
 			&address.Number,
@@ -233,9 +227,8 @@ func (r *PgAddressRepository) Delete(id string) error {
 
 func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Address, error) {
 	insertBuilder, args, errQB := r.qb.Insert("addresses").
-		Columns("customer_id", "cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance", "is_default").
+		Columns("cep", "street", "number", "neighborhood", "city", "state", "aditional_details", "distance", "is_default").
 		Values(
-			&newAddress.CustomerId,
 			&newAddress.Cep,
 			&newAddress.Street,
 			&newAddress.Number,
@@ -261,7 +254,6 @@ func (r *PgAddressRepository) Create(newAddress domain.NewAddress) (*domain.Addr
 
 	createdAddress := &domain.Address{
 		Id:               id,
-		CustomerId:       newAddress.CustomerId,
 		Cep:              newAddress.Cep,
 		Street:           newAddress.Street,
 		Number:           newAddress.Number,
