@@ -234,7 +234,7 @@ func main() {
 				`SELECT a.id
 				 FROM addresses a
 				 INNER JOIN address_customers ac ON ac.address_id = a.id
-				 WHERE ac.customer_id = $1 AND a.is_default = true AND a.is_deleted = false
+				 WHERE ac.customer_id = $1 AND ac.is_default = true
 				 LIMIT 1`,
 				order.Customer.Id,
 			).Scan(&addr)
