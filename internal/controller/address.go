@@ -21,27 +21,30 @@ func NewAddressController(addressUseCase *usecase.AddressUseCase) *AddressContro
 	}
 }
 
-func (c *AddressController) GetById(ctx *gin.Context) {
-	id := ctx.Param("id")
+func (c *AddressController) GetByCustomerId(ctx *gin.Context) {
+	customerId := ctx.Param("id")
 
-	address, err := c.addressUseCase.GetById(id)
+	addresses, err := c.addressUseCase.GetByCustomerId(customerId)
 	if err != nil {
-		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Address not found"})
+		ctx.IndentedJSON(http.StatusNotFound, gin.H{"message": "Addresses not found"})
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, gin.H{"address": address})
+	ctx.IndentedJSON(http.StatusOK, gin.H{"addresses": addresses})
 }
 
 func (c *AddressController) Update(ctx *gin.Context) {
-	var address domain.Address
-	if err := ctx.BindJSON(&address); err != nil {
+	customerId := ctx.Param("id")
+	addressId := ctx.Param("addressId")
+
+	var updateData domain.NewAddress
+	if err := ctx.BindJSON(&updateData); err != nil {
 		c.logger.Error("Invalid address data for update", err)
 		ctx.IndentedJSON(http.StatusBadRequest, gin.H{"message": "Invalid address data"})
 		return
 	}
 
-	err := c.addressUseCase.Update(address)
+	err := c.addressUseCase.Update(customerId, addressId, updateData)
 	if err != nil {
 		c.logger.Error("Failed to update address", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to update address"})
@@ -52,8 +55,10 @@ func (c *AddressController) Update(ctx *gin.Context) {
 }
 
 func (c *AddressController) Delete(ctx *gin.Context) {
-	id := ctx.Param("id")
-	err := c.addressUseCase.Delete(id)
+	customerId := ctx.Param("id")
+	addressId := ctx.Param("addressId")
+
+	err := c.addressUseCase.Delete(customerId, addressId)
 	if err != nil {
 		c.logger.Error("Failed to delete address", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to delete address"})
@@ -63,6 +68,8 @@ func (c *AddressController) Delete(ctx *gin.Context) {
 }
 
 func (c *AddressController) Create(ctx *gin.Context) {
+	customerId := ctx.Param("id")
+
 	var newAddress domain.NewAddress
 	if err := ctx.BindJSON(&newAddress); err != nil {
 		c.logger.Error("Invalid address data for creation", err)
@@ -70,7 +77,7 @@ func (c *AddressController) Create(ctx *gin.Context) {
 		return
 	}
 
-	createdAddress, err := c.addressUseCase.Create(newAddress)
+	createdAddress, err := c.addressUseCase.Create(customerId, newAddress)
 	if err != nil {
 		c.logger.Error("Failed to create address", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to create address"})

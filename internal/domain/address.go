@@ -32,6 +32,7 @@ type AddressRepository interface {
 	FindBy(filters map[string]any) ([]Address, error)
 	FindByCustomerId(customerId string) ([]Address, error)
 	Update(Address) error
-	Delete(id string) error
-	Create(product NewAddress) (*Address, error)
+	UpdateDefaultAddress(customerId string, addressId string) error
+	Delete(customerId string, addressId string) error
+	Create(customerId string, product NewAddress) (*Address, error)
 }

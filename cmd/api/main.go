@@ -44,7 +44,6 @@ func main() {
 
 	productRoutes(protected, dbPool)
 	customerRoutes(protected, dbPool)
-	addressRoutes(protected, dbPool)
 	categoryRoutes(protected, dbPool)
 	orderRoutes(protected, dbPool)
 
@@ -79,26 +78,18 @@ func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 
 	// Setup controllers
 	customerController := controllers.NewCustomerController(customerUseCase, addressUseCase)
+	addressController := controllers.NewAddressController(addressUseCase)
 
 	router.GET("/customers", customerController.GetAll)
 	router.GET("/customers/:id", customerController.GetById)
 	router.PUT("/customers/:id", customerController.Update)
 	router.DELETE("/customers/:id", customerController.Delete)
 	router.POST("/customers", customerController.Create)
-}
 
-func addressRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
-	// Setup repositories
-	addressRepo := postgres.NewPgAddressRepository(pool)
-	addressUseCase := usecase.NewAddressUseCase(addressRepo)
-
-	// Setup controllers
-	addressController := controllers.NewAddressController(addressUseCase)
-
-	router.GET("/addresses/:id", addressController.GetById)
-	router.PUT("/addresses/:id", addressController.Update)
-	router.DELETE("/addresses/:id", addressController.Delete)
-	router.POST("/addresses", addressController.Create)
+	router.GET("customers/:id/addresses", addressController.GetByCustomerId)
+	router.PUT("customers/:id/addresses/:addressId", addressController.Update)
+	router.DELETE("customers/:id/addresses/:addressId", addressController.Delete)
+	router.POST("customers/:id/addresses", addressController.Create)
 }
 
 func categoryRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
