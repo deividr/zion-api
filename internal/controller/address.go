@@ -44,14 +44,14 @@ func (c *AddressController) Update(ctx *gin.Context) {
 		return
 	}
 
-	err := c.addressUseCase.Update(customerId, addressId, updateData)
+	updatedAddress, err := c.addressUseCase.Update(customerId, addressId, updateData)
 	if err != nil {
 		c.logger.Error("Failed to update address", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to update address"})
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, gin.H{"message": "Address updated successfully"})
+	ctx.IndentedJSON(http.StatusOK, updatedAddress)
 }
 
 func (c *AddressController) Delete(ctx *gin.Context) {

@@ -235,13 +235,30 @@ func (r *PgAddressRepository) FindByCustomerId(customerId string) ([]domain.Addr
 }
 
 func (r *PgAddressRepository) Update(address domain.Address) error {
+	// Get the current address to compare CEP and number
+	currentAddress, err := r.FindById(address.Id)
+	if err != nil {
+		return fmt.Errorf("error fetching current address: %v", err)
+	}
+
+	// Check if CEP or number has changed
+	cepChanged := currentAddress.Cep != address.Cep
+	numberChanged := (currentAddress.Number == nil && address.Number != nil) ||
+		(currentAddress.Number != nil && address.Number == nil) ||
+		(currentAddress.Number != nil && address.Number != nil && *currentAddress.Number != *address.Number)
+
+	// If CEP or number changed, we can't update because this address might be shared
+	// The update operation should only update non-identifying fields
+	if cepChanged || numberChanged {
+		return fmt.Errorf("cannot update CEP or number directly - these fields identify the address and it may be shared with other customers")
+	}
+
+	// Update only the non-identifying fields
 	updateBuilder, args, err := r.qb.
 		Update("addresses").
-		Set("cep", address.Cep).
 		Set("street", address.Street).
-		Set("Number", address.Number).
-		Set("Neighborhood", address.Neighborhood).
-		Set("City", address.City).
+		Set("neighborhood", address.Neighborhood).
+		Set("city", address.City).
 		Set("state", address.State).
 		Set("aditional_details", address.AditionalDetails).
 		Set("distance", address.Distance).
