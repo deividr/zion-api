@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"net/http"
-	"strconv"
 
 	"github.com/deividr/zion-api/internal/domain"
 	"github.com/deividr/zion-api/internal/infra/logger"
@@ -23,26 +22,14 @@ func NewProductController(useCase *usecase.ProductUseCase) *ProductController {
 }
 
 func (c *ProductController) GetAll(ctx *gin.Context) {
-	limit, err := strconv.Atoi(ctx.Query("limit"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit params"})
-		return
-	}
-
-	page, err := strconv.Atoi(ctx.Query("page"))
-	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit page"})
-		return
-	}
-
-	products, pagination, err := c.useCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllProductFilters{Name: ctx.Query("name")})
+	products, err := c.useCase.GetAll(domain.FindAllProductFilters{Name: ctx.Query("name")})
 	if err != nil {
 		c.logger.Error("Error fetching products", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Fetching products fatal failed"})
 		return
 	}
 
-	ctx.IndentedJSON(http.StatusOK, gin.H{"products": products, "pagination": pagination})
+	ctx.IndentedJSON(http.StatusOK, gin.H{"products": products})
 }
 
 func (c *ProductController) GetById(ctx *gin.Context) {

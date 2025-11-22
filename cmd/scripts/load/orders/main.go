@@ -46,7 +46,6 @@ func main() {
 		fmt.Println("Erro na conexão com o banco MySql", err)
 		return
 	}
-	defer dbOldPool.Close()
 
 	var totalCount int
 	err = dbOldPool.QueryRow("SELECT COUNT(*) FROM pedido").Scan(&totalCount)
@@ -153,8 +152,15 @@ func main() {
 		order_products = append(order_products, order_product)
 	}
 
-	results.Close()
-	dbOldPool.Close()
+	if err := results.Close(); err != nil {
+		fmt.Println("Erro após iterar os resultados:", err)
+		return
+	}
+
+	if err := dbOldPool.Close(); err != nil {
+		fmt.Println("Erro ao fechar conexão com MySQL:", err)
+		return
+	}
 
 	// Buscar produtos que contêm "ENTREGA" no nome e obter seus old_id
 	deliveryProductsQuery := `SELECT old_id FROM products WHERE UPPER(name) LIKE '%ENTREGA%'`
@@ -331,7 +337,7 @@ func main() {
 		wg.Add(1)
 		go func(o domain.Order) {
 			defer wg.Done()
-			defer bar.Add(1)
+			defer func() { _ = bar.Add(1) }()
 
 			// 1. Processa a ordem principal
 			needsAddress := ordersNeedingAddress[o.Id]
@@ -354,7 +360,10 @@ func main() {
 	}
 
 	wg.Wait()
-	bar.Finish()
+
+	if err := bar.Finish(); err != nil {
+		fmt.Println("Erro ao finalizar a barra de progresso:", err)
+	}
 
 	fmt.Printf(" === ESTATÍSTICAS FINAIS === ")
 	fmt.Printf("Total de pedidos únicos processados: %d\n", len(orders))

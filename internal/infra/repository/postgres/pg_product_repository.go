@@ -21,38 +21,20 @@ func NewPgProductRepository(db *pgxpool.Pool) *PgProductRepository {
 	}
 }
 
-func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters domain.FindAllProductFilters) ([]domain.Product, domain.Pagination, error) {
-	offset := pagination.Limit * (pagination.Page - 1)
-
-	baseQuery := r.qb.
-		Where(squirrel.Eq{"is_deleted": false}).
-		Where(squirrel.ILike{"name": "%" + filters.Name + "%"})
-
-	totalCountQuery, totalCountArgs, err := baseQuery.Select("count(*)").From("products").ToSql()
-	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query de total: %v", err)
-	}
-
-	var totalCount int
-
-	err = r.db.QueryRow(context.Background(), totalCountQuery, totalCountArgs...).Scan(&totalCount)
-	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar total de produtos: %v", err)
-	}
-
-	query, args, err := baseQuery.
+func (r *PgProductRepository) FindAll(filters domain.FindAllProductFilters) ([]domain.Product, error) {
+	query, args, err := r.qb.
 		Select("id", "name", "value", "unity_type", "category_id").
 		From("products").
-		Limit(uint64(pagination.Limit)).
-		Offset(uint64(offset)).
+		Where(squirrel.Eq{"is_deleted": false}).
+		Where(squirrel.ILike{"name": "%" + filters.Name + "%"}).
 		ToSql()
 	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query: %v", err)
+		return nil, fmt.Errorf("erro ao construir query: %v", err)
 	}
 
 	rows, err := r.db.Query(context.Background(), query, args...)
 	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar produtos: %v", err)
+		return nil, fmt.Errorf("erro ao buscar produtos: %v", err)
 	}
 	defer rows.Close()
 
@@ -68,14 +50,12 @@ func (r *PgProductRepository) FindAll(pagination domain.Pagination, filters doma
 			&product.CategoryId,
 		)
 		if err != nil {
-			return nil, domain.Pagination{}, fmt.Errorf("erro ao ler produto: %v", err)
+			return nil, fmt.Errorf("erro ao ler produto: %v", err)
 		}
 		products = append(products, product)
 	}
 
-	pagination.Total = totalCount
-
-	return products, pagination, nil
+	return products, nil
 }
 
 func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {

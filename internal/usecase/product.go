@@ -14,14 +14,13 @@ func NewProductUseCase(repo domain.ProductRepository) *ProductUseCase {
 	return &ProductUseCase{repo: repo}
 }
 
-func (uc *ProductUseCase) GetAll(pagination domain.Pagination, filters domain.FindAllProductFilters) ([]domain.Product, domain.Pagination, error) {
-	products, pagination, err := uc.repo.FindAll(pagination, filters)
-
+func (uc *ProductUseCase) GetAll(filters domain.FindAllProductFilters) ([]domain.Product, error) {
+	products, err := uc.repo.FindAll(filters)
 	if err != nil {
-		return nil, domain.Pagination{}, fmt.Errorf("erro ao buscar produtos: %v", err)
+		return nil, fmt.Errorf("erro ao buscar produtos: %v", err)
 	}
 
-	return products, pagination, nil
+	return products, nil
 }
 
 func (uc *ProductUseCase) GetById(id string) (*domain.Product, error) {
@@ -50,7 +49,6 @@ func (uc *ProductUseCase) Delete(id string) error {
 
 func (uc *ProductUseCase) Create(newProduct domain.NewProduct) (*domain.Product, error) {
 	createdProduct, err := uc.repo.Create(newProduct)
-
 	if err != nil {
 		return nil, fmt.Errorf("erro ao criar produto: %v", err)
 	}
