@@ -238,7 +238,7 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 
 func (r *PgOrderRepository) Update(order domain.Order) error {
 	updateBuilder, args, err := r.qb.
-		Update("orders").Set("number", order.Number).
+		Update("orders").
 		Set("pickup_date", order.PickupDate).
 		Set("order_local", order.OrderLocal).
 		Set("observations", order.Observations).
