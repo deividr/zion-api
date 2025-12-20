@@ -7,6 +7,7 @@ import (
 
 	"github.com/Masterminds/squirrel"
 	"github.com/deividr/zion-api/internal/domain"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -236,7 +237,81 @@ func (r *PgOrderRepository) FindById(id string) (*domain.Order, error) {
 	return &order, nil
 }
 
+func (r *PgOrderRepository) insertOrderProducts(tx pgx.Tx, orderID string, products []domain.OrderProduct) error {
+	if len(products) == 0 {
+		return nil
+	}
+
+	// Insert new products and get their IDs
+	productsInsertBuilder := r.qb.Insert("order_products").
+		Columns("order_id", "product_id", "quantity", "unity_type", "price")
+
+	for _, p := range products {
+		productsInsertBuilder = productsInsertBuilder.Values(orderID, p.ProductId, p.Quantity, p.UnityType, p.Price)
+	}
+
+	sql, args, err := productsInsertBuilder.Suffix("RETURNING id").ToSql()
+	if err != nil {
+		return fmt.Errorf("error building insert products query: %w", err)
+	}
+
+	rows, err := tx.Query(context.Background(), sql, args...)
+	if err != nil {
+		return fmt.Errorf("error inserting products: %w", err)
+	}
+	defer rows.Close()
+
+	var insertedProductIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return fmt.Errorf("error scanning inserted product id: %w", err)
+		}
+		insertedProductIDs = append(insertedProductIDs, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("error after iterating inserted product ids: %w", err)
+	}
+
+	if len(insertedProductIDs) != len(products) {
+		return fmt.Errorf("mismatch count of inserted products, expected %d but got %d", len(products), len(insertedProductIDs))
+	}
+
+	// Bulk insert sub-products
+	subProductRows := [][]any{}
+	for i, p := range products {
+		if len(p.SubProducts) > 0 {
+			orderProductID := insertedProductIDs[i]
+			for _, sp := range p.SubProducts {
+				subProductRows = append(subProductRows, []any{orderProductID, sp.ProductId})
+			}
+		}
+	}
+
+	if len(subProductRows) > 0 {
+		_, err = tx.CopyFrom(
+			context.Background(),
+			pgx.Identifier{"order_sub_products"},
+			[]string{"order_product_id", "product_id"},
+			pgx.CopyFromRows(subProductRows),
+		)
+		if err != nil {
+			return fmt.Errorf("error bulk inserting sub-products: %w", err)
+		}
+	}
+
+	return nil
+}
+
 func (r *PgOrderRepository) Update(order domain.Order) error {
+	tx, err := r.db.Begin(context.Background())
+	if err != nil {
+		return fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
+	// Update order details
 	updateBuilder, args, err := r.qb.
 		Update("orders").
 		Set("pickup_date", order.PickupDate).
@@ -246,16 +321,23 @@ func (r *PgOrderRepository) Update(order domain.Order) error {
 		Where(squirrel.Eq{"id": order.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
 	if err != nil {
-		return fmt.Errorf("error building query to update customer: %v", err)
+		return fmt.Errorf("error building query to update order: %w", err)
 	}
 
-	result, err := r.db.Query(context.Background(), updateBuilder, args...)
-	if err != nil {
-		return fmt.Errorf("error updating customer: %v", err)
+	if _, err := tx.Exec(context.Background(), updateBuilder, args...); err != nil {
+		return fmt.Errorf("error updating order: %w", err)
 	}
-	defer result.Close()
 
-	return nil
+	// Delete old products
+	if _, err := tx.Exec(context.Background(), "DELETE FROM order_products WHERE order_id = $1", order.Id); err != nil {
+		return fmt.Errorf("error deleting old order products: %w", err)
+	}
+
+	if err := r.insertOrderProducts(tx, order.Id, order.Products); err != nil {
+		return err
+	}
+
+	return tx.Commit(context.Background())
 }
 
 func (r *PgOrderRepository) Delete(id string) error {
@@ -268,6 +350,12 @@ func (r *PgOrderRepository) Delete(id string) error {
 }
 
 func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, error) {
+	tx, err := r.db.Begin(context.Background())
+	if err != nil {
+		return nil, fmt.Errorf("error starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+
 	insertBuilder, args, errQB := r.qb.Insert("orders").
 		Columns("number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up").
 		Values(500, &newOrder.PickupDate, &newOrder.Customer.Id, &newOrder.Employee, &newOrder.OrderLocal, &newOrder.Observations, &newOrder.IsPickedUp).
@@ -275,19 +363,26 @@ func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, err
 		ToSql()
 
 	if errQB != nil {
-		return nil, fmt.Errorf("error building query to create order: %v", errQB)
+		return nil, fmt.Errorf("error building query to create order: %w", errQB)
 	}
 
-	var id string
-	errQuery := r.db.QueryRow(context.Background(), insertBuilder, args...).Scan(&id)
+	var orderID string
+	if err := tx.QueryRow(context.Background(), insertBuilder, args...).Scan(&orderID); err != nil {
+		return nil, fmt.Errorf("error creating order: %w", err)
+	}
 
-	if errQuery != nil {
-		return nil, fmt.Errorf("error creating order: %v", errQB)
+	// Assuming newOrder has a 'Products' field.
+	if err := r.insertOrderProducts(tx, orderID, newOrder.Products); err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(context.Background()); err != nil {
+		return nil, fmt.Errorf("error committing transaction: %w", err)
 	}
 
 	return &domain.Order{
 		NewOrder: newOrder,
-		Id:       id,
+		Id:       orderID,
 		Number:   "500", // TODO: get number from sequence
 	}, nil
 }
