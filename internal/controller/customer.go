@@ -42,7 +42,10 @@ func (c *CustomerController) GetAll(ctx *gin.Context) {
 		return
 	}
 
-	customers, pagination, err := c.customerUseCase.GetAll(domain.Pagination{Limit: limit, Page: page}, domain.FindAllCustomerFilters{Name: ctx.Query("name")})
+	customers, pagination, err := c.customerUseCase.GetAll(
+		domain.Pagination{Limit: limit, Page: page},
+		domain.FindAllCustomerFilters{Name: ctx.Query("name"), Phone: ctx.Query("phone"), Email: ctx.Query("email")},
+	)
 	if err != nil {
 		c.logger.Error("Error fetching customers", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Fetching customers fatal failed"})

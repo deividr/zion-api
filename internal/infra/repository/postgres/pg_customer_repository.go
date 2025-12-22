@@ -26,7 +26,12 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 
 	baseQuery := r.qb.
 		Where(squirrel.Eq{"is_deleted": false}).
-		Where(squirrel.ILike{"name": "%" + filters.Name + "%"})
+		Where(squirrel.Or{
+			squirrel.ILike{"name": "%" + filters.Name + "%"},
+			squirrel.ILike{"phone": "%" + filters.Phone + "%"},
+			squirrel.ILike{"phone2": "%" + filters.Phone + "%"},
+			squirrel.ILike{"email": "%" + filters.Email + "%"},
+		})
 
 	totalCountQuery, totalCountArgs, err := baseQuery.Select("count(*)").From("customers").ToSql()
 	if err != nil {
@@ -46,7 +51,6 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset)).
 		ToSql()
-
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("erro ao construir query: %v", err)
 	}
@@ -74,7 +78,6 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 		customers = append(customers, customer)
 	}
 
-	// Update pagination with total count
 	pagination.Total = totalCount
 
 	return customers, pagination, nil
@@ -83,8 +86,8 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 func (r *PgCustomerRepository) FindById(id string) (*domain.Customer, error) {
 	var customer domain.Customer
 	err := r.db.QueryRow(context.Background(), `
-		SELECT id, name, phone, phone2, email 
-		FROM customers 
+		SELECT id, name, phone, phone2, email
+		FROM customers
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
 		&customer.Id,
@@ -93,7 +96,6 @@ func (r *PgCustomerRepository) FindById(id string) (*domain.Customer, error) {
 		&customer.Phone2,
 		&customer.Email,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("cliente não encontrado: %v", err)
 	}
@@ -108,8 +110,8 @@ func (r *PgCustomerRepository) Update(customer domain.Customer) error {
 		Set("phone2", customer.Phone2).
 		Set("email", customer.Email).
 		Where(squirrel.Eq{"id": customer.Id}).
-		Where(squirrel.Eq{"is_deleted": false}).ToSql()
-
+		Where(squirrel.Eq{"is_deleted": false}).
+		ToSql()
 	if err != nil {
 		return fmt.Errorf("erro ao construir query para atualizar o cliente: %v", err)
 	}

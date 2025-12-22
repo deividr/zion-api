@@ -32,7 +32,7 @@ func (c *OrderController) GetAll(ctx *gin.Context) {
 
 	page, err := strconv.Atoi(ctx.Query("page"))
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid limit page"})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid page params"})
 		return
 	}
 
