@@ -25,13 +25,22 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 	offset := pagination.Limit * (pagination.Page - 1)
 
 	baseQuery := r.qb.
-		Where(squirrel.Eq{"is_deleted": false}).
-		Where(squirrel.Or{
-			squirrel.ILike{"name": "%" + filters.Name + "%"},
+		Where(squirrel.Eq{"is_deleted": false})
+
+	if filters.Name != "" {
+		baseQuery = baseQuery.Where(squirrel.ILike{"name": "%" + filters.Name + "%"})
+	}
+
+	if filters.Phone != "" {
+		baseQuery = baseQuery.Where(squirrel.Or{
 			squirrel.ILike{"phone": "%" + filters.Phone + "%"},
 			squirrel.ILike{"phone2": "%" + filters.Phone + "%"},
-			squirrel.ILike{"email": "%" + filters.Email + "%"},
 		})
+	}
+
+	if filters.Email != "" {
+		baseQuery = baseQuery.Where(squirrel.ILike{"email": "%" + filters.Email + "%"})
+	}
 
 	totalCountQuery, totalCountArgs, err := baseQuery.Select("count(*)").From("customers").ToSql()
 	if err != nil {
