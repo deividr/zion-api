@@ -9,9 +9,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
-	controllers "github.com/deividr/zion-api/internal/controller"
+	"github.com/deividr/zion-api/internal/application/use-cases/upload"
+	"github.com/deividr/zion-api/internal/controller"
 	"github.com/deividr/zion-api/internal/infra/database"
 	ordersControllers "github.com/deividr/zion-api/internal/infra/factory/controllers/orders"
+	"github.com/deividr/zion-api/internal/infra/factory/services"
 	"github.com/deividr/zion-api/internal/infra/repository/postgres"
 	"github.com/deividr/zion-api/internal/middleware"
 	"github.com/deividr/zion-api/internal/usecase"
@@ -46,6 +48,7 @@ func main() {
 	customerRoutes(protected, dbPool)
 	categoryRoutes(protected, dbPool)
 	orderRoutes(protected, dbPool)
+	uploadRoutes(protected)
 
 	r.Run(":8000")
 }
@@ -53,18 +56,31 @@ func main() {
 func productRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	// Setup repositories
 	productRepo := postgres.NewPgProductRepository(pool)
-
 	// Setup use cases
 	productUseCase := usecase.NewProductUseCase(productRepo)
-
 	// Setup controllers
-	productController := controllers.NewProductController(productUseCase)
-
+	productController := controller.NewProductController(productUseCase)
 	router.GET("/products", productController.GetAll)
 	router.GET("/products/:id", productController.GetById)
 	router.PUT("/products/:id", productController.Update)
 	router.DELETE("/products/:id", productController.Delete)
 	router.POST("/products", productController.Create)
+}
+
+func uploadRoutes(router *gin.RouterGroup) {
+	// Setup repositories
+	uploadRepo, err := services.NewTigrisUploadRepository()
+	if err != nil {
+		panic(err)
+	}
+
+	// Setup use cases
+	uploadUseCase := upload.NewUploadUseCase(uploadRepo)
+
+	// Setup controllers
+	uploadController := controller.NewUploadController(uploadUseCase)
+
+	router.GET("/pre-signed-url", uploadController.GetPresignedURL)
 }
 
 func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
@@ -77,8 +93,8 @@ func customerRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	addressUseCase := usecase.NewAddressUseCase(addressRepo)
 
 	// Setup controllers
-	customerController := controllers.NewCustomerController(customerUseCase, addressUseCase)
-	addressController := controllers.NewAddressController(addressUseCase)
+	customerController := controller.NewCustomerController(customerUseCase, addressUseCase)
+	addressController := controller.NewAddressController(addressUseCase)
 
 	router.GET("/customers", customerController.GetAll)
 	router.GET("/customers/:id", customerController.GetById)
@@ -100,7 +116,7 @@ func categoryRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	categoryUseCase := usecase.NewCategoryProductUseCase(categoryRepo)
 
 	// Setup controllers
-	categoryController := controllers.NewCategoryProductController(categoryUseCase)
+	categoryController := controller.NewCategoryProductController(categoryUseCase)
 
 	router.GET("/categories", categoryController.GetAll)
 	router.GET("/categories/:id", categoryController.GetById)
@@ -116,7 +132,7 @@ func orderRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	orderUseCase := usecase.NewOrderUseCase(orderRepo)
 
 	// Setup controllers
-	orderController := controllers.NewOrderController(orderUseCase)
+	orderController := controller.NewOrderController(orderUseCase)
 
 	orderByIdController := ordersControllers.GetOrderByIdControllerFactory(pool)
 
