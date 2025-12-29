@@ -23,7 +23,7 @@ func NewPgProductRepository(db *pgxpool.Pool) *PgProductRepository {
 
 func (r *PgProductRepository) FindAll(filters domain.FindAllProductFilters) ([]domain.Product, error) {
 	query, args, err := r.qb.
-		Select("id", "name", "value", "unity_type", "category_id").
+		Select("id", "name", "value", "unity_type", "category_id", "image_url").
 		From("products").
 		Where(squirrel.Eq{"is_deleted": false}).
 		Where(squirrel.ILike{"name": "%" + filters.Name + "%"}).
@@ -48,6 +48,7 @@ func (r *PgProductRepository) FindAll(filters domain.FindAllProductFilters) ([]d
 			&product.Value,
 			&product.UnityType,
 			&product.CategoryId,
+			&product.ImageUrl,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("erro ao ler produto: %v", err)
@@ -61,7 +62,7 @@ func (r *PgProductRepository) FindAll(filters domain.FindAllProductFilters) ([]d
 func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 	var product domain.Product
 	err := r.db.QueryRow(context.Background(), `
-		SELECT id, name, value, unity_type, category_id
+		SELECT id, name, value, unity_type, category_id, image_url
 		FROM products
 		WHERE id = $1 AND is_deleted = false
 	`, id).Scan(
@@ -70,6 +71,7 @@ func (r *PgProductRepository) FindById(id string) (*domain.Product, error) {
 		&product.Value,
 		&product.UnityType,
 		&product.CategoryId,
+		&product.ImageUrl,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("produto não encontrado: %v", err)
@@ -84,6 +86,7 @@ func (r *PgProductRepository) Update(product domain.Product) error {
 		Set("value", product.Value).
 		Set("unity_type", product.UnityType).
 		Set("category_id", product.CategoryId).
+		Set("image_url", product.ImageUrl).
 		Where(squirrel.Eq{"id": product.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
 	if err != nil {
@@ -110,8 +113,8 @@ func (r *PgProductRepository) Delete(id string) error {
 
 func (r *PgProductRepository) Create(newProduct domain.NewProduct) (*domain.Product, error) {
 	insertBuilder, args, errQB := r.qb.Insert("products").
-		Columns("name", "value", "unity_type", "category_id").
-		Values(&newProduct.Name, &newProduct.Value, &newProduct.UnityType, &newProduct.CategoryId).
+		Columns("name", "value", "unity_type", "category_id", "image_url").
+		Values(&newProduct.Name, &newProduct.Value, &newProduct.UnityType, &newProduct.CategoryId, &newProduct.ImageUrl).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -132,6 +135,7 @@ func (r *PgProductRepository) Create(newProduct domain.NewProduct) (*domain.Prod
 		Value:      newProduct.Value,
 		UnityType:  newProduct.UnityType,
 		CategoryId: newProduct.CategoryId,
+		ImageUrl:   newProduct.ImageUrl,
 	}
 
 	return createdProduct, nil

@@ -1,18 +1,20 @@
 package domain
 
 type NewProduct struct {
-	Name       string `json:"name"`
-	Value      uint32 `json:"value"`
-	UnityType  string `json:"unityType"`
-	CategoryId string `json:"categoryId"`
+	Name       string  `json:"name"`
+	Value      uint32  `json:"value"`
+	UnityType  string  `json:"unityType"`
+	CategoryId string  `json:"categoryId"`
+	ImageUrl   *string `json:"imageUrl"`
 }
 
 type Product struct {
-	Id         string `json:"id"`
-	Name       string `json:"name"`
-	Value      uint32 `json:"value"`
-	UnityType  string `json:"unityType"`
-	CategoryId string `json:"categoryId"`
+	Id         string  `json:"id"`
+	Name       string  `json:"name"`
+	Value      uint32  `json:"value"`
+	UnityType  string  `json:"unityType"`
+	CategoryId string  `json:"categoryId"`
+	ImageUrl   *string `json:"imageUrl"`
 }
 
 type FindAllProductFilters struct {
