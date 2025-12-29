@@ -3,19 +3,23 @@ package storage
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/deividr/zion-api/internal/domain/services"
 )
 
 type Tigris struct {
-	client *s3.PresignClient
-	bucket string
+	client        *s3.PresignClient
+	bucket        string
+	endpoint      string
+	publicURLBase string
 }
 
-func NewTigris(bucket, endpoint, region, accessKey, secretKey string) (*Tigris, error) {
+func NewTigris(bucket, endpoint, publicURLBase, region, accessKey, secretKey string) (*Tigris, error) {
 	cfg, err := config.LoadDefaultConfig(context.Background(),
 		config.WithRegion(region),
 	)
@@ -28,13 +32,20 @@ func NewTigris(bucket, endpoint, region, accessKey, secretKey string) (*Tigris, 
 	})
 	presignClient := s3.NewPresignClient(s3Client)
 
+	// Se publicURLBase não foi fornecida, inferir do padrão do Tigris
+	if publicURLBase == "" {
+		publicURLBase = fmt.Sprintf("https://%s.t3.storage.dev", bucket)
+	}
+
 	return &Tigris{
-		client: presignClient,
-		bucket: bucket,
+		client:        presignClient,
+		bucket:        bucket,
+		endpoint:      endpoint,
+		publicURLBase: publicURLBase,
 	}, nil
 }
 
-func (t *Tigris) GetPresignedURL(objectKey string) (string, error) {
+func (t *Tigris) GetPresignedURL(objectKey string) (*services.PresignedURLResponse, error) {
 	req, err := t.client.PresignPutObject(context.Background(), &s3.PutObjectInput{
 		Bucket: &t.bucket,
 		Key:    &objectKey,
@@ -42,8 +53,19 @@ func (t *Tigris) GetPresignedURL(objectKey string) (string, error) {
 		po.Expires = 15 * time.Minute
 	})
 	if err != nil {
-		return "", fmt.Errorf("failed to generate presigned URL: %w", err)
+		return nil, fmt.Errorf("failed to generate presigned URL: %w", err)
 	}
 
-	return req.URL, nil
+	// Construir a URL pública
+	publicURL := t.buildPublicURL(objectKey)
+
+	return &services.PresignedURLResponse{
+		SignedURL: req.URL,
+		PublicURL: publicURL,
+	}, nil
+}
+
+func (t *Tigris) buildPublicURL(objectKey string) string {
+	publicURLBase := strings.TrimSuffix(t.publicURLBase, "/")
+	return fmt.Sprintf("%s/%s", publicURLBase, objectKey)
 }

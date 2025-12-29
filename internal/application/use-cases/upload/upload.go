@@ -15,7 +15,7 @@ func NewUploadUseCase(uploadRepo services.UploadRepository) *UploadUseCase {
 	}
 }
 
-func (uc *UploadUseCase) Execute() (string, error) {
+func (uc *UploadUseCase) Execute() (*services.PresignedURLResponse, error) {
 	objectKey := uuid.New().String()
 	return uc.uploadRepo.GetPresignedURL(objectKey)
 }

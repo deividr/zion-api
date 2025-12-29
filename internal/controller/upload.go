@@ -18,11 +18,14 @@ func NewUploadController(uploadUseCase *upload.UploadUseCase) *UploadController 
 }
 
 func (c *UploadController) GetPresignedURL(ctx *gin.Context) {
-	url, err := c.uploadUseCase.Execute()
+	response, err := c.uploadUseCase.Execute()
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"url": url})
+	ctx.JSON(http.StatusOK, gin.H{
+		"signedUrl": response.SignedURL,
+		"publicUrl": response.PublicURL,
+	})
 }
