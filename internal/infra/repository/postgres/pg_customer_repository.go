@@ -144,6 +144,10 @@ func (r *PgCustomerRepository) Delete(id string) error {
 }
 
 func (r *PgCustomerRepository) Create(newCustomer domain.NewCustomer) (*domain.Customer, error) {
+	if newCustomer.Phone2 != nil && *newCustomer.Phone2 == "" {
+		newCustomer.Phone2 = nil
+	}
+
 	insertBuilder, args, errQB := r.qb.Insert("customers").
 		Columns("name", "phone", "phone2", "email").
 		Values(&newCustomer.Name, &newCustomer.Phone, &newCustomer.Phone2, &newCustomer.Email).
@@ -158,7 +162,7 @@ func (r *PgCustomerRepository) Create(newCustomer domain.NewCustomer) (*domain.C
 	errQuery := r.db.QueryRow(context.Background(), insertBuilder, args...).Scan(&id)
 
 	if errQuery != nil {
-		return nil, fmt.Errorf("erro ao criar cliente: %v", errQB)
+		return nil, fmt.Errorf("erro ao criar cliente: %v", errQuery)
 	}
 
 	createdCustomer := &domain.Customer{
