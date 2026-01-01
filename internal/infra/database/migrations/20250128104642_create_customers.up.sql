@@ -1,5 +1,5 @@
 CREATE TABLE customers (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
     phone text NOT NULL UNIQUE,
     phone2 text UNIQUE,

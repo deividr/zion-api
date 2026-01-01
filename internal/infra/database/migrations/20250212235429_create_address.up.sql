@@ -1,5 +1,5 @@
 CREATE TABLE addresses (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     old_id int,
     customer_id uuid NOT NULL REFERENCES customers (id),
     cep text NOT NULL,

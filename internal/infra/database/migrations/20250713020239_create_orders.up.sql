@@ -1,5 +1,5 @@
 CREATE TABLE orders (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     order_number int NOT NULL,
     pickup_date timestamp NOT NULL,
     customer_id uuid NOT NULL REFERENCES customers (id),
@@ -13,8 +13,8 @@ CREATE TABLE orders (
 );
 
 CREATE TABLE order_products (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_id uuid NOT NULL REFERENCES orders (id),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id uuid NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
     product_id uuid NOT NULL REFERENCES products (id),
     quantity integer NOT NULL,
     unity_type char(2) NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE order_products (
 );
 
 CREATE TABLE order_sub_products (
-    id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-    order_product_id uuid NOT NULL REFERENCES order_products (id),
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_product_id uuid NOT NULL REFERENCES order_products (id) ON DELETE CASCADE,
     product_id uuid NOT NULL REFERENCES products (id)
 );
