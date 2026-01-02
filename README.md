@@ -88,6 +88,7 @@ zion-api/
    ```
 
 5. Start the server:
+
    ```bash
    make run
    ```
@@ -194,6 +195,10 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Squirrel - SQL Query Builder](https://github.com/Masterminds/squirrel)
 - [Clerk - Authentication Provider](https://clerk.dev/)
 - [Clean Architecture by Robert C. Martin](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+
+## 👏 TODO
+
+[] - Mover as entidades que estão soltas na pasta domain para um pasta entities;
 
 ---
 
