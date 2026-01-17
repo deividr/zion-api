@@ -27,19 +27,33 @@ func (r *PgCustomerRepository) FindAll(pagination domain.Pagination, filters dom
 	baseQuery := r.qb.
 		Where(squirrel.Eq{"is_deleted": false})
 
+	var filterConditions []squirrel.Sqlizer
+
 	if filters.Name != "" {
-		baseQuery = baseQuery.Where(squirrel.ILike{"name": "%" + filters.Name + "%"})
+		filterConditions = append(filterConditions, squirrel.ILike{"name": "%" + filters.Name + "%"})
 	}
 
 	if filters.Phone != "" {
-		baseQuery = baseQuery.Where(squirrel.Or{
+		filterConditions = append(filterConditions, squirrel.Or{
 			squirrel.ILike{"phone": "%" + filters.Phone + "%"},
 			squirrel.ILike{"phone2": "%" + filters.Phone + "%"},
 		})
 	}
 
 	if filters.Email != "" {
-		baseQuery = baseQuery.Where(squirrel.ILike{"email": "%" + filters.Email + "%"})
+		filterConditions = append(filterConditions, squirrel.ILike{"email": "%" + filters.Email + "%"})
+	}
+
+	if len(filterConditions) > 0 {
+		if len(filterConditions) == 1 {
+			baseQuery = baseQuery.Where(filterConditions[0])
+		} else {
+			orConditions := squirrel.Or{}
+			for _, cond := range filterConditions {
+				orConditions = append(orConditions, cond)
+			}
+			baseQuery = baseQuery.Where(orConditions)
+		}
 	}
 
 	totalCountQuery, totalCountArgs, err := baseQuery.Select("count(*)").From("customers").ToSql()
