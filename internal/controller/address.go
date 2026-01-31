@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/deividr/zion-api/internal/domain"
@@ -79,6 +80,15 @@ func (c *AddressController) Create(ctx *gin.Context) {
 
 	createdAddress, err := c.addressUseCase.Create(customerId, newAddress)
 	if err != nil {
+		var duplicateAddrErr *domain.DuplicateAddressError
+		if errors.As(err, &duplicateAddrErr) {
+			ctx.IndentedJSON(http.StatusConflict, gin.H{
+				"message": "This address is already registered for this customer",
+				"error":   "duplicate_address",
+			})
+			return
+		}
+
 		c.logger.Error("Failed to create address", err)
 		ctx.IndentedJSON(http.StatusInternalServerError, gin.H{"message": "Failed to create address"})
 		return

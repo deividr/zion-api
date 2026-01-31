@@ -160,7 +160,7 @@ func (uc *AddressUseCase) Delete(customerId string, addressId string) error {
 func (uc *AddressUseCase) Create(customerId string, newAddress domain.NewAddress) (*domain.Address, error) {
 	createdAddress, err := uc.repo.Create(customerId, newAddress)
 	if err != nil {
-		return nil, fmt.Errorf("error on create address: %v", err)
+		return nil, err
 	}
 
 	return createdAddress, nil

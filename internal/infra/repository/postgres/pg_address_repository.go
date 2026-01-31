@@ -2,10 +2,12 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Masterminds/squirrel"
 	"github.com/deividr/zion-api/internal/domain"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -54,7 +56,6 @@ func (r *PgAddressRepository) FindAll(pagination domain.Pagination) ([]domain.Ad
 		Limit(uint64(pagination.Limit)).
 		Offset(uint64(offset)).
 		ToSql()
-
 	if err != nil {
 		return nil, domain.Pagination{}, fmt.Errorf("error on query build: %v", err)
 	}
@@ -120,7 +121,6 @@ func (r *PgAddressRepository) FindById(id string) (*domain.Address, error) {
 		&address.AditionalDetails,
 		&address.Distance,
 	)
-
 	if err != nil {
 		return nil, fmt.Errorf("address not found: %v", err)
 	}
@@ -263,7 +263,6 @@ func (r *PgAddressRepository) Update(address domain.Address) error {
 		Set("aditional_details", address.AditionalDetails).
 		Set("distance", address.Distance).
 		Where(squirrel.Eq{"id": address.Id}).ToSql()
-
 	if err != nil {
 		return fmt.Errorf("error building query to update address: %v", err)
 	}
@@ -329,7 +328,6 @@ func (r *PgAddressRepository) Create(customerId string, newAddress domain.NewAdd
 	`
 
 	err := r.db.QueryRow(context.Background(), checkQuery, newAddress.Cep, newAddress.Number).Scan(&addressId)
-
 	// If no existing address found, create a new one
 	if err != nil {
 		insertBuilder, args, errQB := r.qb.Insert("addresses").
@@ -356,23 +354,6 @@ func (r *PgAddressRepository) Create(customerId string, newAddress domain.NewAdd
 		}
 	}
 
-	// Check if the relationship already exists
-	var existingRelationship bool
-	checkRelationshipQuery := `
-		SELECT EXISTS(
-			SELECT 1 FROM address_customers
-			WHERE address_id = $1 AND customer_id = $2
-		)
-	`
-	err = r.db.QueryRow(context.Background(), checkRelationshipQuery, addressId, customerId).Scan(&existingRelationship)
-	if err != nil {
-		return nil, fmt.Errorf("error checking existing relationship: %v", err)
-	}
-
-	if existingRelationship {
-		return nil, fmt.Errorf("this address is already associated with the customer")
-	}
-
 	// If the address is marked as default, remove default flag from other addresses
 	if newAddress.IsDefault != nil && *newAddress.IsDefault {
 		_, err := r.db.Exec(context.Background(),
@@ -392,6 +373,10 @@ func (r *PgAddressRepository) Create(customerId string, newAddress domain.NewAdd
 		*newAddress.IsDefault,
 	)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return nil, domain.NewDuplicateAddressError(customerId, newAddress.Cep, fmt.Sprint(newAddress.Number))
+		}
 		return nil, fmt.Errorf("error creating relationship between address and customer: %v", err)
 	}
 
