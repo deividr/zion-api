@@ -3,7 +3,7 @@ primary_region = 'gru'
 
 [build]
 [build.args]
-GO_VERSION = '1.23.3'
+GO_VERSION = '1.25.5'
 
 [env]
 PORT = '8080'
