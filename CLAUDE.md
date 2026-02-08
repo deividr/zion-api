@@ -91,3 +91,7 @@ All routes are JWT-protected. Resources: products, customers, addresses (nested 
 ## Environment Variables
 
 See `.env.example` for required variables: `DATABASE_URL`, `DATABASE_URL_MIGRATE`, `CLERK_PEM_PUBLIC_KEY`, `ALLOWED_ORIGINS`, `BUCKET_NAME`, AWS/Tigris credentials.
+
+## Git Commits
+
+- Do NOT add `Co-Authored-By` lines to commit messages.
