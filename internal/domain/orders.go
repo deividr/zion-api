@@ -2,7 +2,9 @@ package domain
 
 import "time"
 
-type NewOrder struct {
+type Order struct {
+	Id           string         `json:"id"`
+	Number       string         `json:"number"`
 	PickupDate   time.Time      `json:"pickupDate"`
 	Customer     Customer       `json:"customer"`
 	Address      *Address       `json:"address"`
@@ -11,14 +13,12 @@ type NewOrder struct {
 	Observations *string        `json:"observations"`
 	IsPickedUp   *bool          `json:"isPickedUp"`
 	Products     []OrderProduct `json:"products"`
+	CreatedAt    time.Time      `json:"createdAt"`
+	UpdatedAt    *time.Time     `json:"updatedAt"`
 }
 
-type Order struct {
-	NewOrder
-	Id        string     `json:"id"`
-	Number    string     `json:"number"`
-	CreatedAt time.Time  `json:"createdAt"`
-	UpdatedAt *time.Time `json:"updatedAt"`
+func (o *Order) SetAddress(address *Address) {
+	o.Address = address
 }
 
 type OrderProduct struct {
@@ -50,5 +50,5 @@ type OrderRepository interface {
 	FindById(id string) (*Order, error)
 	Update(Order) error
 	Delete(id string) error
-	Create(order NewOrder) (*Order, error)
+	Create(order Order) (*Order, error)
 }

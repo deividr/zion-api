@@ -312,12 +312,18 @@ func (r *PgOrderRepository) Update(order domain.Order) error {
 	defer func() { _ = tx.Rollback(context.Background()) }()
 
 	// Update order details
+	var addressID *string
+	if order.Address != nil {
+		addressID = &order.Address.Id
+	}
+
 	updateBuilder, args, err := r.qb.
 		Update("orders").
 		Set("pickup_date", order.PickupDate).
 		Set("order_local", order.OrderLocal).
 		Set("observations", order.Observations).
 		Set("is_picked_up", order.IsPickedUp).
+		Set("address_id", addressID).
 		Where(squirrel.Eq{"id": order.Id}).
 		Where(squirrel.Eq{"is_deleted": false}).ToSql()
 	if err != nil {
@@ -349,16 +355,21 @@ func (r *PgOrderRepository) Delete(id string) error {
 	return nil
 }
 
-func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, error) {
+func (r *PgOrderRepository) Create(order domain.Order) (*domain.Order, error) {
 	tx, err := r.db.Begin(context.Background())
 	if err != nil {
 		return nil, fmt.Errorf("error starting transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(context.Background()) }()
 
+	var addressID *string
+	if order.Address != nil {
+		addressID = &order.Address.Id
+	}
+
 	insertBuilder, args, errQB := r.qb.Insert("orders").
-		Columns("number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up").
-		Values(500, &newOrder.PickupDate, &newOrder.Customer.Id, &newOrder.Employee, &newOrder.OrderLocal, &newOrder.Observations, &newOrder.IsPickedUp).
+		Columns("number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up", "address_id").
+		Values(500, order.PickupDate, order.Customer.Id, order.Employee, order.OrderLocal, order.Observations, order.IsPickedUp, addressID).
 		Suffix("RETURNING id").
 		ToSql()
 
@@ -371,8 +382,7 @@ func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, err
 		return nil, fmt.Errorf("error creating order: %w", err)
 	}
 
-	// Assuming newOrder has a 'Products' field.
-	if err := r.insertOrderProducts(tx, orderID, newOrder.Products); err != nil {
+	if err := r.insertOrderProducts(tx, orderID, order.Products); err != nil {
 		return nil, err
 	}
 
@@ -380,9 +390,7 @@ func (r *PgOrderRepository) Create(newOrder domain.NewOrder) (*domain.Order, err
 		return nil, fmt.Errorf("error committing transaction: %w", err)
 	}
 
-	return &domain.Order{
-		NewOrder: newOrder,
-		Id:       orderID,
-		Number:   "500", // TODO: get number from sequence
-	}, nil
+	order.Id = orderID
+	order.Number = "500" // TODO: get number from sequence
+	return &order, nil
 }

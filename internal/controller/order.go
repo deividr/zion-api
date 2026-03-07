@@ -61,14 +61,13 @@ func (c *OrderController) GetAll(ctx *gin.Context) {
 }
 
 func (c *OrderController) Update(ctx *gin.Context) {
-	var order domain.Order
-	if err := ctx.BindJSON(&order); err != nil {
+	var input usecase.UpdateOrderInput
+	if err := ctx.BindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid order data"})
 		return
 	}
 
-	err := c.useCase.Update(order)
-	if err != nil {
+	if err := c.useCase.Update(input); err != nil {
 		c.logger.Error("Failed to update order", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to update order"})
 		return
@@ -89,13 +88,13 @@ func (c *OrderController) Delete(ctx *gin.Context) {
 }
 
 func (c *OrderController) Create(ctx *gin.Context) {
-	var newOrder domain.NewOrder
-	if err := ctx.BindJSON(&newOrder); err != nil {
+	var input usecase.CreateOrderInput
+	if err := ctx.BindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"message": "Invalid order data"})
 		return
 	}
 
-	createdOrder, err := c.useCase.Create(newOrder)
+	createdOrder, err := c.useCase.Create(input)
 	if err != nil {
 		c.logger.Error("Failed to create order", err)
 		ctx.JSON(http.StatusInternalServerError, gin.H{"message": "Failed to create order"})

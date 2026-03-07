@@ -127,9 +127,11 @@ func categoryRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 func orderRoutes(router *gin.RouterGroup, pool *pgxpool.Pool) {
 	// Setup repositories
 	orderRepo := postgres.NewPgOrderRepository(pool)
+	addressRepo := postgres.NewPgAddressRepository(pool)
+	customerRepo := postgres.NewPgCustomerRepository(pool)
 
 	// Setup use cases
-	orderUseCase := usecase.NewOrderUseCase(orderRepo)
+	orderUseCase := usecase.NewOrderUseCase(orderRepo, addressRepo, customerRepo)
 
 	// Setup controllers
 	orderController := controller.NewOrderController(orderUseCase)
