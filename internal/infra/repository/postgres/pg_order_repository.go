@@ -368,7 +368,7 @@ func (r *PgOrderRepository) Create(order domain.Order) (*domain.Order, error) {
 	}
 
 	insertBuilder, args, errQB := r.qb.Insert("orders").
-		Columns("number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up", "address_id").
+		Columns("order_number", "pickup_date", "customer_id", "employee_id", "order_local", "observations", "is_picked_up", "address_id").
 		Values(500, order.PickupDate, order.Customer.Id, order.Employee, order.OrderLocal, order.Observations, order.IsPickedUp, addressID).
 		Suffix("RETURNING id").
 		ToSql()
