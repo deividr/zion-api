@@ -162,7 +162,7 @@ func main() {
 
 			_, err = dbNewPool.Exec(context.Background(),
 				`INSERT INTO address_customers (address_id, customer_id, is_default)
-				 VALUES ($1, $2)`,
+				 VALUES ($1, $2, $3)`,
 				addressId,
 				customerId,
 				true,
